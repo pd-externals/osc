@@ -10,7 +10,7 @@ class.sources = \
 
 datafiles = \
         LICENSE.txt \
-        README.txt \
+        README.md \
         osc-meta.pd \
         packOSC-help.pd \
         packOSCstream-help.pd \
