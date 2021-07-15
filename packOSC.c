@@ -37,6 +37,7 @@ The OSC webpage is http://cnmat.cnmat.berkeley.edu/OpenSoundControl
 #define SC_BUFFER_SIZE 64000
 
 #include "packingOSC.h"
+#include "math.h"
 
 /* This is from OSC-client.h :*/
 /*
