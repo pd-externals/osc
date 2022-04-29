@@ -37,7 +37,6 @@ The OSC webpage is http://cnmat.cnmat.berkeley.edu/OpenSoundControl
 #define SC_BUFFER_SIZE 64000
 
 #include "packingOSC.h"
-#include "math.h"
 
 /* This is from OSC-client.h :*/
 /*
@@ -249,10 +248,10 @@ static void packOSC_send(t_packOSC *x, t_symbol *s, int argc, t_atom *argv);
 static void packOSC_anything(t_packOSC *x, t_symbol *s, int argc, t_atom *argv);
 static void packOSC_free(t_packOSC *x);
 void packOSC_setup(void);
-static typedArg packOSC_parseatom(t_atom *a);
-static typedArg packOSC_packMIDI(t_atom *a);
-static typedArg packOSC_forceatom(t_atom *a, char ctype);
-static typedArg packOSC_blob(t_atom *a);
+static typedArg packOSC_parseatom(t_atom *a, t_packOSC *x);
+static typedArg packOSC_packMIDI(t_atom *a, t_packOSC *x);
+static typedArg packOSC_forceatom(t_atom *a, char ctype, t_packOSC *x);
+static typedArg packOSC_blob(t_atom *a, t_packOSC *x);
 static int packOSC_writetypedmessage(t_packOSC *x, OSCbuf *buf, char *messageName, int numArgs, typedArg *args, char *typeStr);
 static int packOSC_writemessage(t_packOSC *x, OSCbuf *buf, char *messageName, int numArgs, typedArg *args);
 static void packOSC_sendbuffer(t_packOSC *x);
@@ -476,7 +475,7 @@ static void packOSC_sendtyped(t_packOSC *x, t_symbol *s, int argc, t_atom *argv)
 #ifdef DEBUG
                     printf("packOSC_blob %d:\n", nArgs);
 #endif
-                    args[typedArgIndex] = packOSC_blob(&argv[argvIndex]);
+                    args[typedArgIndex] = packOSC_blob(&argv[argvIndex], x);
                     /* Make sure it was blobbable */
                     if (args[typedArgIndex].type != BLOB_osc) goto cleanup;
                 }
@@ -485,10 +484,10 @@ static void packOSC_sendtyped(t_packOSC *x, t_symbol *s, int argc, t_atom *argv)
             {
                 if (c == 'm')
                 { // pack the next four arguments into one int
-                  args[typedArgIndex++] = packOSC_packMIDI(&argv[argvIndex]);
-                  argvIndex += 4;  
+                  args[typedArgIndex++] = packOSC_packMIDI(&argv[argvIndex], x);
+                  argvIndex += 4;
                 }
-                else args[typedArgIndex++] = packOSC_forceatom(&argv[argvIndex++], c);
+                else args[typedArgIndex++] = packOSC_forceatom(&argv[argvIndex++], c, x);
             }
         }
         //if(packOSC_writetypedmessage(x, x->x_oscbuf, messageName, nArgs, args, typeStr))
@@ -502,7 +501,7 @@ static void packOSC_sendtyped(t_packOSC *x, t_symbol *s, int argc, t_atom *argv)
     {
         for (i = 0; i < (unsigned)(argc-1); i++)
         {
-            args[i] = packOSC_parseatom(&argv[i+1]);
+            args[i] = packOSC_parseatom(&argv[i+1], x);
 #ifdef DEBUG
             switch (args[i].type)
             {
@@ -614,7 +613,7 @@ void packOSC_setup(void)
     class_addanything(packOSC_class, (t_method)packOSC_anything);
 }
 
-static typedArg packOSC_parseatom(t_atom *a)
+static typedArg packOSC_parseatom(t_atom *a, t_packOSC *x)
 {
     typedArg returnVal;
     t_float  f;
@@ -650,14 +649,14 @@ static typedArg packOSC_parseatom(t_atom *a)
             return returnVal;
         default:
             atom_string(a, buf, MAXPDSTRING);
-            error("packOSC: atom type %d not implemented (%s)", a->a_type, buf);
+            pd_error(x, "packOSC: atom type %d not implemented (%s)", a->a_type, buf);
             returnVal.type = NOTYPE_osc;
             returnVal.datum.s = NULL;
             return returnVal;
     }
 }
 
-static typedArg packOSC_blob(t_atom *a)
+static typedArg packOSC_blob(t_atom *a, t_packOSC *x)
 { /* ctype is one of i,f,s,T,F,N,I*/
     typedArg    returnVal;
     t_float     f;
@@ -668,19 +667,19 @@ static typedArg packOSC_blob(t_atom *a)
     /* the atoms must all be bytesl */
     if(a->a_type != A_FLOAT)
     {
-        error("packOSC_blob: all values must be floats");
+        pd_error(x, "packOSC_blob: all values must be floats");
         return returnVal;
     }
     f = atom_getfloat(a);
     i = (int)f;
     if (i != f)
     {
-        error("packOSC_blob: all values must be whole numbers");
+        pd_error(x, "packOSC_blob: all values must be whole numbers");
         return returnVal;
     }
     if ((i < -128) || (i > 255))
     {
-        error("packOSC_blob: all values must be bytes");
+        pd_error(x, "packOSC_blob: all values must be bytes");
         return returnVal;
     }
     returnVal.type = BLOB_osc;
@@ -688,7 +687,7 @@ static typedArg packOSC_blob(t_atom *a)
     return returnVal;
 }
 
-static typedArg packOSC_packMIDI(t_atom *a)
+static typedArg packOSC_packMIDI(t_atom *a, t_packOSC *x)
 { /* pack four bytes at a into one int32 */
   int         i;
   typedArg    returnVal;
@@ -702,7 +701,7 @@ static typedArg packOSC_packMIDI(t_atom *a)
 #endif
     if ((a->a_type != A_FLOAT))
     {
-      error("packOSC: MIDI parameters must be floats");
+      pd_error(x, "packOSC: MIDI parameters must be floats");
       returnVal.type = NOTYPE_osc;
       returnVal.datum.s = NULL;
       return returnVal;
@@ -713,14 +712,14 @@ static typedArg packOSC_packMIDI(t_atom *a)
 #endif
     if ((i < 2) && (m[i] != (m[i] & 0x0FF)))
     {
-      error("packOSC: MIDI parameters must be less than 256");
+      pd_error(x, "packOSC: MIDI parameters must be less than 256");
       returnVal.type = NOTYPE_osc;
       returnVal.datum.s = NULL;
       return returnVal;
     }
     else if ((i > 1) && (m[i] != (m[i] & 0x07F)))
     {
-      error("packOSC: MIDI parameters must be less than 128");
+      pd_error(x, "packOSC: MIDI parameters must be less than 128");
       returnVal.type = NOTYPE_osc;
       returnVal.datum.s = NULL;
       return returnVal;
@@ -731,7 +730,7 @@ static typedArg packOSC_packMIDI(t_atom *a)
   return returnVal;
 }
 
-static typedArg packOSC_forceatom(t_atom *a, char ctype)
+static typedArg packOSC_forceatom(t_atom *a, char ctype, t_packOSC *x)
 { /* ctype is one of i,f,s,T,F,N,I*/
     typedArg    returnVal;
     t_float     f;
@@ -815,7 +814,7 @@ static typedArg packOSC_forceatom(t_atom *a, char ctype)
             break;
         default:
             atom_string(a, buf, MAXPDSTRING);
-            error("packOSC: atom type %d not implemented (%s)", a->a_type, buf);
+            pd_error(x, "packOSC: atom type %d not implemented (%s)", a->a_type, buf);
             returnVal.type = NOTYPE_osc;
             returnVal.datum.s = NULL;
             break;
@@ -836,7 +835,7 @@ static int packOSC_writetypedmessage
 
     if (returnVal)
     {
-        error("packOSC: Problem writing address. (%d)", returnVal);
+        pd_error(x, "packOSC: Problem writing address. (%d)", returnVal);
         return returnVal;
     }
     for (j = i = 0; (typeStr[i+1]!= 0) || (j < numArgs); j++, i++)
@@ -933,7 +932,7 @@ static int packOSC_writemessage(t_packOSC *x, OSCbuf *buf, char *messageName, in
                     typeTags[j+1] = 'b';
                     break;
                 default:
-                    error("packOSC: arg %d type is unrecognized(%d)", j, args[j].type);
+                    pd_error(x, "packOSC: arg %d type is unrecognized(%d)", j, args[j].type);
                     break;
             }
         }
@@ -944,7 +943,7 @@ static int packOSC_writemessage(t_packOSC *x, OSCbuf *buf, char *messageName, in
         returnVal = OSC_writeAddressAndTypes(buf, messageName, typeTags);
         if (returnVal)
         {
-            error("packOSC: Problem writing address.");
+            pd_error(x, "packOSC: Problem writing address.");
         }
         freebytes(typeTags, sizeof(char)*(numTags+2));
     }
@@ -1089,7 +1088,7 @@ static int OSC_CheckOverflow(OSCbuf *buf, size_t bytesNeeded)
 {
     if ((bytesNeeded) > OSC_freeSpaceInBuffer(buf))
     {
-        error("packOSC: buffer overflow");
+        pd_error(NULL, "packOSC: buffer overflow");
         return 1;
     }
     return 0;
@@ -1381,7 +1380,7 @@ static int OSC_writeBlobArg(OSCbuf *buf, typedArg *arg, size_t nArgs)
     {
         if (arg[i].type != BLOB_osc)
         {
-            error("packOSC: blob element %lu not blob type", i);
+            pd_error(NULL, "packOSC: blob element %lu not blob type", i);
             return 9;
         }
         b = (unsigned char)((arg[i].datum.i)&0x0FF);/* force int to 8-bit byte */
