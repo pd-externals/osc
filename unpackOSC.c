@@ -687,7 +687,7 @@ static t_float unpackOSC_DeltaTime(OSCTimeTag tt)
         /* if (ttusec < nowusec) return 0.0; */
         /*negative delays are all right */
         delta = ttusec - nowusec;
-        return (float)(delta*0.001f);
+        return (t_float)(delta*0.001f);
     }
 }
 /* end of unpackOSC.c */
