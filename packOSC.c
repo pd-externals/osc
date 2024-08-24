@@ -9,7 +9,7 @@
 /*
 Written by Matt Wright, The Center for New Music and Audio Technologies,
 University of California, Berkeley.  Copyright (c) 1996,97,98,99,2000,01,02,03
-The Regents of the University of California (Regents).  
+The Regents of the University of California (Regents).
 
 Permission to use, copy, modify, distribute, and distribute modified versions
 of this software and its documentation without fee and without a signed
@@ -452,7 +452,7 @@ static void packOSC_sendtyped(t_packOSC *x, t_symbol *s, int argc, t_atom *argv)
                 if (c == 'm') nTagsWithData += 3; // MIDI tag should have four data bytes
 /*
     OSC-blob
-    An int32 size count, followed by that many 8-bit bytes of arbitrary binary data, 
+    An int32 size count, followed by that many 8-bit bytes of arbitrary binary data,
     followed by 0-3 additional zero bytes to make the total number of bits a multiple of 32.
 */
                 if (c == 'b') blobCount++; /* b probably has more than one byte, so set a flag */
@@ -597,7 +597,7 @@ static void packOSC_free(t_packOSC *x)
 }
 
 void packOSC_setup(void)
-{ 
+{
     packOSC_class = class_new(gensym("packOSC"), (t_newmethod)packOSC_new,
         (t_method)packOSC_free,
         sizeof(t_packOSC), 0, A_DEFFLOAT, 0);
@@ -629,7 +629,7 @@ static typedArg packOSC_parseatom(t_atom *a, t_packOSC *x)
     int      i;
     t_symbol s;
     char     buf[MAXPDSTRING];
-  
+
     atom_string(a, buf, MAXPDSTRING);
 #ifdef DEBUG
     printf("packOSC: atom type %d (%s)\n", a->a_type, buf);
@@ -670,7 +670,7 @@ static typedArg packOSC_blob(t_atom *a, t_packOSC *x)
     typedArg    returnVal;
     t_float     f;
     int         i;
-  
+
     returnVal.type = NOTYPE_osc;
     returnVal.datum.s = NULL;
     /* the atoms must all be bytesl */
@@ -1032,7 +1032,7 @@ static void packOSC_sendbuffer(t_packOSC *x)
 }
 
 /* The next part is copied and morphed from OSC-client.c. */
-/* 
+/*
   Author: Matt Wright
   Version 2.2: Calls htonl in the right places 20000620
   Version 2.3: Gets typed messages right.
@@ -1420,7 +1420,7 @@ static int OSC_writeStringArg(OSCbuf *buf, char *arg)
           tag string. */
 
         if(OSC_CheckOverflow(buf, len+4))return 1; /* Too conservative */
-        buf->bufptr += 
+        buf->bufptr +=
         OSC_padStringWithAnExtraStupidComma(buf->bufptr, arg);
 
     }
@@ -1586,9 +1586,9 @@ static OSCTimeTag OSCTT_CurrentPdTimePlusOffset(uint32_t offset)
         (unsigned) offset/onemillion;
     /* Now get the fractional part. */
     tt.fraction = (unsigned) (delta_ms*onethousand - tt.seconds*onemillion) +
-        packOSCStartTimeTag.fraction + 
+        packOSCStartTimeTag.fraction +
         (unsigned)(offset%onemillion); /* in usec */
-        
+
     if (tt.fraction > onemillion)
     {
         tt.fraction -= onemillion;

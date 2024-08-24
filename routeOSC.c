@@ -254,7 +254,7 @@ static void routeOSC_set(t_routeOSC *x, t_symbol *s, int argc, t_atom *argv)
 static void routeOSC_paths(t_routeOSC *x, t_symbol *s, int argc, t_atom *argv)
 { /* print  out the paths we are matching */
     int i;
-    
+
     for (i = 0; i < x->x_num; ++i) post("path[%d]: %s (depth %d)", i, x->x_prefixes[i], x->x_prefix_depth[i]);
 }
 
@@ -294,7 +294,7 @@ static void routeOSC_doanything(t_routeOSC *x, t_symbol *s, int argc, t_atom *ar
     if (*nextSlash == '\0')
     { /* pattern_depth == 1 */
         /* last level of the address, so we'll output the argument list */
-    
+
         for (i = 0; i < x->x_num; ++i)
         {
             if
@@ -456,7 +456,7 @@ static char *NthSlashOrNull(char *p, int n)
     for (i = 0; i < n; ++i)
     {
         while (*p != '/')
-        { 
+        {
             if (*p == '\0') return p;
             p++;
         }
@@ -511,9 +511,9 @@ static void StrCopyUntilNthSlash(char *target, const char *source, int n)
 static int PatternMatch (const char *  pattern, const char * test)
 {
     theWholePattern = pattern;
-  
+
     if (pattern == 0 || pattern[0] == 0) return test[0] == 0;
-  
+
     if (test[0] == 0)
     {
         if (pattern[0] == '*') return PatternMatch (pattern+1, test);
@@ -526,7 +526,7 @@ static int PatternMatch (const char *  pattern, const char * test)
             return test[0] == 0;
         case '?':
             return PatternMatch (pattern+1, test+1);
-        case '*': 
+        case '*':
             if (PatternMatch (pattern+1, test)) return 1;
             return PatternMatch (pattern, test+1);
         case ']':
@@ -537,7 +537,7 @@ static int PatternMatch (const char *  pattern, const char * test)
             return MatchBrackets (pattern,test);
         case '{':
             return MatchList (pattern,test);
-        case '\\':  
+        case '\\':
             if (pattern[1] == 0) return test[0] == 0;
             if (pattern[1] == test[0]) return PatternMatch (pattern+2,test+1);
             return 0;
@@ -549,13 +549,13 @@ static int PatternMatch (const char *  pattern, const char * test)
 
 /* we know that pattern[0] == '[' and test[0] != 0 */
 
-static int MatchBrackets (const char *pattern, const char *test) 
+static int MatchBrackets (const char *pattern, const char *test)
 {
     int result;
     int negated = 0;
     const char *p = pattern;
 
-    if (pattern[1] == 0) 
+    if (pattern[1] == 0)
     {
         pd_error(NULL, "routeOSC: Unterminated [ in pattern \".../%s/...\"", theWholePattern);
         return 0;
@@ -567,20 +567,20 @@ static int MatchBrackets (const char *pattern, const char *test)
     }
     while (*p != ']')
     {
-        if (*p == 0) 
+        if (*p == 0)
         {
             pd_error(NULL, "Unterminated [ in pattern \".../%s/...\"", theWholePattern);
             return 0;
         }
-        if (p[1] == '-' && p[2] != 0) 
+        if (p[1] == '-' && p[2] != 0)
         {
-            if (test[0] >= p[0] && test[0] <= p[2]) 
+            if (test[0] >= p[0] && test[0] <= p[2])
             {
                 result = !negated;
                 goto advance;
             }
         }
-        if (p[0] == test[0]) 
+        if (p[0] == test[0])
         {
             result = !negated;
             goto advance;
@@ -590,9 +590,9 @@ static int MatchBrackets (const char *pattern, const char *test)
     result = negated;
 advance:
     if (!result) return 0;
-    while (*p != ']') 
+    while (*p != ']')
     {
-        if (*p == 0) 
+        if (*p == 0)
         {
             pd_error(NULL, "Unterminated [ in pattern \".../%s/...\"", theWholePattern);
             return 0;
@@ -602,13 +602,13 @@ advance:
     return PatternMatch (p+1,test+1);
 }
 
-static int MatchList (const char *pattern, const char *test) 
+static int MatchList (const char *pattern, const char *test)
 {
     const char *restOfPattern, *tp = test;
 
-    for(restOfPattern = pattern; *restOfPattern != '}'; restOfPattern++) 
+    for(restOfPattern = pattern; *restOfPattern != '}'; restOfPattern++)
     {
-        if (*restOfPattern == 0) 
+        if (*restOfPattern == 0)
         {
             pd_error(NULL, "Unterminated { in pattern \".../%s/...\"", theWholePattern);
             return 0;
@@ -618,19 +618,19 @@ static int MatchList (const char *pattern, const char *test)
     pattern++; /* skip open curly brace */
     while (1)
     {
-        if (*pattern == ',') 
+        if (*pattern == ',')
         {
             if (PatternMatch (restOfPattern, tp)) return 1;
             tp = test;
             ++pattern;
         }
         else if (*pattern == '}') return PatternMatch (restOfPattern, tp);
-        else if (*pattern == *tp) 
+        else if (*pattern == *tp)
         {
             ++pattern;
             ++tp;
         }
-        else 
+        else
         {
             tp = test;
             while (*pattern != ',' && *pattern != '}') pattern++;

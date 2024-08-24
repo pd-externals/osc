@@ -1,6 +1,6 @@
 /* pipelist.c 20070711 Martin Peach based on pipe from x_time.c */
 /* 20080706 added anything method for meta-messages */
-#include "m_pd.h" 
+#include "m_pd.h"
 /* -------------------------- pipe -------------------------- */
 
 static t_class *pipelist_class;
@@ -169,7 +169,7 @@ static void pipelist_clear(t_pipelist *x)
 
 void pipelist_setup(void)
 {
-    pipelist_class = class_new(gensym("pipelist"), 
+    pipelist_class = class_new(gensym("pipelist"),
         (t_newmethod)pipelist_new, (t_method)pipelist_clear,
         sizeof(t_pipelist), 0, A_GIMME, 0);
     class_addlist(pipelist_class, pipelist_list);

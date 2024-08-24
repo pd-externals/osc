@@ -118,7 +118,7 @@ void unpackOSC_setup(void)
 }
 
 /* unpackOSC_list expects an OSC packet in the form of a list of floats on [0..255] */
-static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv) 
+static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
 {
     int             size, messageLen, i, j;
     char            *messageName, *args, *buf;
@@ -245,7 +245,7 @@ static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
         printf("unpackOSC: bundle end ] depth is %d\n", x->x_recursion_level);
 #endif
 
-    } 
+    }
     else if ((argc == 24) && (strcmp(buf, "#time") == 0))
     {
         post("unpackOSC: Time message: %s\n :).\n", buf);
@@ -346,7 +346,7 @@ static void unpackOSC_Smessage(t_atom *data_at, int *data_atc, void *v, int n)
 }
 
 static void unpackOSC_PrintTypeTaggedArgs(t_atom *data_at, int *data_atc, void *v, int n)
-{ 
+{
     char    *typeTags, *thisType, *p;
     int     myargc = *data_atc;
     t_atom  *mya = data_at;
@@ -552,7 +552,7 @@ static void unpackOSC_PrintHeuristicallyTypeGuessedArgs(t_atom *data_at, int *da
 
 #define STRING_ALIGN_PAD 4
 
-static char *unpackOSC_DataAfterAlignedString(char *string, char *boundary) 
+static char *unpackOSC_DataAfterAlignedString(char *string, char *boundary)
 {
     /* The argument is a block of data beginning with a string.  The
         string has (presumably) been padded with extra null characters
@@ -609,16 +609,16 @@ static char *unpackOSC_DataAfterAlignedString(char *string, char *boundary)
 #ifdef DEBUG
     printf("unpackOSC_DataAfterAlignedString first non-null character at %p\n",  &string[i]);
 #endif
- 
+
     return string+i;
 }
 
-static int unpackOSC_IsNiceString(char *string, char *boundary) 
+static int unpackOSC_IsNiceString(char *string, char *boundary)
 {
     /* Arguments same as DataAfterAlignedString().  Is the given "string"
-       really an OSC-string?  I.e., is it 
-        "A sequence of non-null ASCII characters followed by a null, followed 
-        by 0-3 additional null characters to make the total number of bits a 
+       really an OSC-string?  I.e., is it
+        "A sequence of non-null ASCII characters followed by a null, followed
+        by 0-3 additional null characters to make the total number of bits a
         multiple of 32"? (OSC 1.0)
         Returns 1 if true, else 0. */
 
