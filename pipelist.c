@@ -17,7 +17,7 @@ typedef struct _hang
 typedef struct _pipelist
 {
     t_object    x_obj;
-    float       x_deltime;
+    t_float     x_deltime;
     t_outlet    *x_pipelistout;
     t_hang      *x_hang;
 } t_pipelist;
@@ -35,7 +35,7 @@ void pipelist_setup(void);
 static void *pipelist_new(t_symbol *s, int argc, t_atom *argv)
 {
     t_pipelist  *x = (t_pipelist *)pd_new(pipelist_class);
-    float       deltime;
+    t_float     deltime;
 
     if (argc)
     { /* We accept one argument to set the delay time, ignore any further args */
