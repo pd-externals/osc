@@ -599,6 +599,8 @@ void packOSC_setup(void)
         gensym("typetags"), A_DEFFLOAT, 0);
     class_addmethod(packOSC_class, (t_method)packOSC_setbufsize,
         gensym("bufsize"), A_DEFFLOAT, 0);
+    class_addmethod(packOSC_class, (t_method)packOSC_usepdtime,
+        gensym("usepdtime"), A_FLOAT, 0);
     class_addmethod(packOSC_class, (t_method)packOSC_setTimeTagOffset,
         gensym("timetagoffset"), A_DEFFLOAT, 0);
     class_addmethod(packOSC_class, (t_method)packOSC_send,
