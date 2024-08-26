@@ -2,17 +2,15 @@
 #ifndef _PACKINGOSC
 #include "m_pd.h"
 
-    #include <stdio.h>
-    #include <string.h>
-    #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #ifdef _WIN32
-    #include <winsock2.h>
-    #include <sys/timeb.h>
+# include <winsock2.h>
 #else
-    #include <sys/types.h>
-    #include <netinet/in.h>
-    #include <ctype.h>
-    #include <sys/time.h>
+# include <sys/types.h>
+# include <netinet/in.h>
+# include <ctype.h>
 #endif /* _WIN32 */
 
 /* Declarations */

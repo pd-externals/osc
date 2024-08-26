@@ -76,8 +76,7 @@ static OSCTimeTag OSCTT_Now(void)
     _ftime(&tb);
 
     /* First get the seconds right */
-    tt.seconds = (unsigned)SECONDS_FROM_1900_to_1970 +
-      (unsigned)tb.time;
+    tt.seconds = (unsigned)SECONDS_FROM_1900_to_1970 + (unsigned)tb.time;
     /* Now get the fractional part. */
     tt.fraction = (unsigned)tb.millitm*1000;
 #else
@@ -86,12 +85,11 @@ static OSCTimeTag OSCTT_Now(void)
     gettimeofday(&tv, &tz);
 
     /* First get the seconds right */
-    tt.seconds = (unsigned) SECONDS_FROM_1900_to_1970 +
-      (unsigned) tv.tv_sec;
+    tt.seconds = (unsigned)SECONDS_FROM_1900_to_1970 + (unsigned)tv.tv_sec;
     /* Now get the fractional part. */
-    tt.fraction = (unsigned) tv.tv_usec;
+    tt.fraction = (unsigned)tv.tv_usec;
 #endif
-    tt.fraction *= (unsigned) TWO_TO_THE_32_OVER_ONE_MILLION; /* convert usec to 32-bit fraction of 1 sec */
+    tt.fraction *= (unsigned)TWO_TO_THE_32_OVER_ONE_MILLION; /* convert usec to 32-bit fraction of 1 sec */
     return tt;
 }
 
