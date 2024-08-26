@@ -90,7 +90,7 @@ typedef struct _routeOSC
     t_object    x_obj; /* required header */
     int         x_num; /* Number of prefixes we store */
     int         x_verbosity; /* level of debug output required */
-    char        **x_prefixes; /* the OSC addresses to be matched */
+    const char  **x_prefixes; /* the OSC addresses to be matched */
     int         *x_prefix_depth; /* the number of slashes in each prefix */
     void        **x_outlets; /* one for each prefix plus one for everything else */
 } t_routeOSC;
@@ -109,9 +109,9 @@ static void *routeOSC_new(t_symbol *s, int argc, t_atom *argv);
 static void routeOSC_set(t_routeOSC *x, t_symbol *s, int argc, t_atom *argv);
 static void routeOSC_paths(t_routeOSC *x, t_symbol *s, int argc, t_atom *argv);
 static void routeOSC_verbosity(t_routeOSC *x, t_floatarg v);
-static int routeOSC_count_slashes(char *prefix);
-static char *NextSlashOrNull(char *p);
-static char *NthSlashOrNull(char *p, int n);
+static int routeOSC_count_slashes(const char *prefix);
+static const char *NextSlashOrNull(const char *p);
+static const char *NthSlashOrNull(const char *p, int n);
 static void StrCopyUntilSlash(char *target, const char *source);
 static void StrCopyUntilNthSlash(char *target, const char *source, int n);
 
@@ -199,7 +199,7 @@ static void *routeOSC_new(t_symbol *s, int argc, t_atom *argv)
         }
     }
 /* now allocate the storage for each path */
-    x->x_prefixes = (char **)getzbytes(x->x_num*sizeof(char *)); /* the OSC addresses to be matched */
+    x->x_prefixes = (const char **)getzbytes(x->x_num*sizeof(const char *)); /* the OSC addresses to be matched */
     x->x_prefix_depth = (int *)getzbytes(x->x_num*sizeof(int));  /* the number of slashes in each prefix */
     x->x_outlets = (void **)getzbytes((x->x_num+1)*sizeof(void *)); /* one for each prefix plus one for everything else */
 /* put the pointer to the path in x_prefixes */
@@ -264,10 +264,10 @@ static void routeOSC_verbosity(t_routeOSC *x, t_floatarg v)
     if (x->x_verbosity) post("routeOSC_verbosity(%p) is %d", x, x->x_verbosity);
 }
 
-static int routeOSC_count_slashes(char *prefix)
+static int routeOSC_count_slashes(const char *prefix)
 { /* find the path depth of the prefix by counting the numberof slashes */
     int i = 0;
-    char *p = prefix;
+    const char *p = prefix;
 
     while (*p != '\0') if (*p++ == '/') i++;
     return i;
@@ -275,7 +275,7 @@ static int routeOSC_count_slashes(char *prefix)
 
 static void routeOSC_doanything(t_routeOSC *x, t_symbol *s, int argc, t_atom *argv)
 {
-    char    *pattern, *nextSlash;
+    const char    *pattern, *nextSlash;
     int     i = 0, pattern_depth = 0, matchedAnything = 0;
     int     noPath = 0; // nonzero if we are dealing with a simple list (as from a previous [routeOSC])
 
@@ -444,13 +444,13 @@ static void routeOSC_list(t_routeOSC *x, t_symbol *s, int argc, t_atom *argv)
     }
 }
 
-static char *NextSlashOrNull(char *p)
+static const char *NextSlashOrNull(const char *p)
 {
     while (*p != '/' && *p != '\0') p++;
     return p;
 }
 
-static char *NthSlashOrNull(char *p, int n)
+static const char *NthSlashOrNull(const char *p, int n)
 {
     int i;
     for (i = 0; i < n; ++i)

@@ -133,7 +133,7 @@ typedef struct
     {
         int   i;
         float f;
-        char  *s;
+        const char  *s;
     } datum;
 } typedArg;
 
@@ -150,13 +150,13 @@ typedef struct
                      /*	anything else */
 
 
-static int OSC_strlen(char *s);
-static int OSC_padString(char *dest, char *str);
-static int OSC_padStringWithAnExtraStupidComma(char *dest, char *str);
+static int OSC_strlen(const char *s);
+static int OSC_padString(char *dest, const char *str);
+static int OSC_padStringWithAnExtraStupidComma(char *dest, const char *str);
 static int OSC_WriteStringPadding(char *dest, int i);
 static int OSC_WriteBlobPadding(char *dest, int i);
 
-static int CheckTypeTag(OSCbuf *buf, char expectedType);
+static int CheckTypeTag(const OSCbuf *buf, char expectedType);
 
 /* Initialize the given OSCbuf.  The user of this module must pass in the
    block of memory that this OSCbuf will use for a buffer, and the number of
@@ -170,21 +170,21 @@ static void OSC_resetBuffer(OSCbuf *buf);
 
 /* Is the buffer empty?  (I.e., would it be stupid to send the buffer
    contents to the synth?) */
-static int OSC_isBufferEmpty(OSCbuf *buf);
+static int OSC_isBufferEmpty(const OSCbuf *buf);
 
 /* How much space is left in the buffer? */
-static size_t OSC_freeSpaceInBuffer(OSCbuf *buf);
+static size_t OSC_freeSpaceInBuffer(const OSCbuf *buf);
 
 /* Does the buffer contain a valid OSC packet?  (Returns nonzero if yes.) */
-static int OSC_isBufferDone(OSCbuf *buf);
+static int OSC_isBufferDone(const OSCbuf *buf);
 
 /* When you're ready to send out the buffer (i.e., when OSC_isBufferDone()
    returns true), call these two procedures to get the OSC packet that's been
    assembled and its size in bytes.  (And then call OSC_resetBuffer() if you
    want to re-use this OSCbuf for the next packet.)  */
-static char *OSC_getPacket(OSCbuf *buf);
-static int OSC_packetSize(OSCbuf *buf);
-static int OSC_CheckOverflow(OSCbuf *buf, size_t bytesNeeded);
+static char *OSC_getPacket(const OSCbuf *buf);
+static int OSC_packetSize(const OSCbuf *buf);
+static int OSC_CheckOverflow(const OSCbuf *buf, size_t bytesNeeded);
 
 /* Here's the basic model for building up OSC messages in an OSCbuf:
     - Make sure the OSCbuf has been initialized with OSC_initBuffer().
@@ -216,13 +216,13 @@ static int OSC_writeAddressAndTypes(OSCbuf *buf, char *name, char *types);
 static int OSC_writeFloatArg(OSCbuf *buf, float arg);
 static int OSC_writeIntArg(OSCbuf *buf, uint32_t arg);
 static int OSC_writeBlobArg(OSCbuf *buf, typedArg *arg, size_t nArgs);
-static int OSC_writeStringArg(OSCbuf *buf, char *arg);
+static int OSC_writeStringArg(OSCbuf *buf, const char *arg);
 static int OSC_writeNullArg(OSCbuf *buf, char type);
 
 /* How many bytes will be needed in the OSC format to hold the given
    string?  The length of the string, plus the null char, plus any padding
    needed for 4-byte alignment. */
-static int OSC_effectiveStringLength(char *string);
+static int OSC_effectiveStringLength(const char *string);
 
 static t_class *packOSC_class;
 
@@ -238,7 +238,7 @@ typedef struct _packOSC
     size_t      x_buflength; /* number of elements in x_bufferForOSCbuf and x_bufferForOSClist */
     char        *x_bufferForOSCbuf; /*[SC_BUFFER_SIZE];*/
     t_atom      *x_bufferForOSClist; /*[SC_BUFFER_SIZE];*/
-    char        *x_prefix;
+    const char  *x_prefix;
     int         x_reentry_count;
     int         x_use_pd_time;
 } t_packOSC;
@@ -283,8 +283,7 @@ static void *packOSC_new(void)
         pd_error(x, "packOSC: unable to allocate %lu bytes for x_bufferForOSClist", (long)(sizeof(t_atom)*x->x_buflength));
         goto fail;
     }
-    if (x->x_oscbuf != NULL)
-        OSC_initBuffer(x->x_oscbuf, x->x_buflength, x->x_bufferForOSCbuf);
+    OSC_initBuffer(x->x_oscbuf, x->x_buflength, x->x_bufferForOSCbuf);
     x->x_listout = outlet_new(&x->x_obj, &s_list);
     x->x_bdpthout = outlet_new(&x->x_obj, &s_float);
     x->x_timeTagOffset = -1; /* immediately */
@@ -1069,32 +1068,32 @@ static void OSC_resetBuffer(OSCbuf *buf)
     buf->typeStringPtr = 0;
 }
 
-static int OSC_isBufferEmpty(OSCbuf *buf)
+static int OSC_isBufferEmpty(const OSCbuf *buf)
 {
     return buf->bufptr == buf->buffer;
 }
 
-static size_t OSC_freeSpaceInBuffer(OSCbuf *buf)
+static size_t OSC_freeSpaceInBuffer(const OSCbuf *buf)
 {
     return buf->size - (buf->bufptr - buf->buffer);
 }
 
-static int OSC_isBufferDone(OSCbuf *buf)
+static int OSC_isBufferDone(const OSCbuf *buf)
 {
     return (buf->state == DONE || buf->state == ONE_MSG_ARGS);
 }
 
-static char *OSC_getPacket(OSCbuf *buf)
+static char *OSC_getPacket(const OSCbuf *buf)
 {
     return buf->buffer;
 }
 
-static int OSC_packetSize(OSCbuf *buf)
+static int OSC_packetSize(const OSCbuf *buf)
 {
     return (buf->bufptr - buf->buffer);
 }
 
-static int OSC_CheckOverflow(OSCbuf *buf, size_t bytesNeeded)
+static int OSC_CheckOverflow(const OSCbuf *buf, size_t bytesNeeded)
 {
     if ((bytesNeeded) > OSC_freeSpaceInBuffer(buf))
     {
@@ -1300,16 +1299,17 @@ static int OSC_writeAddressAndTypes(OSCbuf *buf, char *name, char *types)
     return 0;
 }
 
-static int CheckTypeTag(OSCbuf *buf, char expectedType)
+static int CheckTypeTag(const OSCbuf *buf, char expectedType)
 {
     char c;
+    const char*typeStringPtr = buf->typeStringPtr;
 
-    if (buf->typeStringPtr)
+    if (typeStringPtr)
     {
 #ifdef DEBUG
-        printf("CheckTypeTag buf->typeStringPtr %p (%s)\n", buf->typeStringPtr, buf->typeStringPtr);
+        printf("CheckTypeTag typeStringPtr %p (%s)\n", typeStringPtr, typeStringPtr);
 #endif
-        c = *(buf->typeStringPtr);
+        c = *typeStringPtr;
 #ifdef DEBUG
         printf("CheckTypeTag buf %p expectedType %c c is %c\n", buf, expectedType, c);
 #endif
@@ -1319,18 +1319,18 @@ static int CheckTypeTag(OSCbuf *buf, char expectedType)
             {
                 post("packOSC: According to the type tag (%c) I expected more arguments.", c);
             }
-            else if (*(buf->typeStringPtr) == '\0')
+            else if (*typeStringPtr == '\0')
             {
                 post("packOSC: According to the type tag I didn't expect any more arguments.");
             }
             else
             {
                 post("packOSC: According to the type tag I expected an argument of a different type.");
-                post("* Expected %c, string now %s\n", expectedType, buf->typeStringPtr);
+                post("* Expected %c, string now %s\n", expectedType, typeStringPtr);
             }
             return 9;
         }
-        ++(buf->typeStringPtr);
+        ++typeStringPtr;
     }
     return 0;
 }
@@ -1405,7 +1405,7 @@ static int OSC_writeBlobArg(OSCbuf *buf, typedArg *arg, size_t nArgs)
     return 0;
 }
 
-static int OSC_writeStringArg(OSCbuf *buf, char *arg)
+static int OSC_writeStringArg(OSCbuf *buf, const char *arg)
 {
     int len;
 
@@ -1446,7 +1446,7 @@ static int OSC_writeNullArg(OSCbuf *buf, char type)
 
 /* String utilities */
 
-static int OSC_strlen(char *s)
+static int OSC_strlen(const char *s)
 {
     int i;
     for (i = 0; s[i] != '\0'; i++) /* Do nothing */ ;
@@ -1454,7 +1454,7 @@ static int OSC_strlen(char *s)
 }
 
 #define STRING_ALIGN_PAD 4
-static int OSC_effectiveStringLength(char *string)
+static int OSC_effectiveStringLength(const char *string)
 {
     int len = OSC_strlen(string) + 1;  /* We need space for the null char. */
 
@@ -1466,7 +1466,7 @@ static int OSC_effectiveStringLength(char *string)
     return len;
 }
 
-static int OSC_padString(char *dest, char *str)
+static int OSC_padString(char *dest, const char *str)
 {
     int i;
 
@@ -1475,7 +1475,7 @@ static int OSC_padString(char *dest, char *str)
     return OSC_WriteStringPadding(dest, i);
 }
 
-static int OSC_padStringWithAnExtraStupidComma(char *dest, char *str)
+static int OSC_padStringWithAnExtraStupidComma(char *dest, const char *str)
 {
     int i;
 
