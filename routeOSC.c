@@ -121,7 +121,7 @@ static void StrCopyUntilNthSlash(char *target, const char *source, int n);
 static const char *theWholePattern; /* Just for warning messages */
 static int MatchBrackets (const char *pattern, const char *test);
 static int MatchList (const char *pattern, const char *test);
-static int PatternMatch (const char *  pattern, const char * test);
+static int PatternMatch (const char *pattern, const char *test);
 
 static t_class *routeOSC_class;
 t_symbol *ps_list, *ps_complain, *ps_emptySymbol;
@@ -508,7 +508,7 @@ static void StrCopyUntilNthSlash(char *target, const char *source, int n)
     Adapted from oscpattern.c, by Matt Wright and Amar Chaudhury
 */
 
-static int PatternMatch (const char *  pattern, const char * test)
+static int PatternMatch (const char *pattern, const char *test)
 {
     theWholePattern = pattern;
 
