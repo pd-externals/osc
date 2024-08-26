@@ -45,10 +45,6 @@ static OSCTimeTag OSCTT_Immediately(void);
 static OSCTimeTag OSCTT_Infinite(void);
 static OSCTimeTag OSCTT_Now(void);
 
-static OSCTimeTag OSCTT_CurrentTimePlusOffset(uint32_t offset);
-static OSCTimeTag OSCTT_CurrentPdTimePlusOffset(uint32_t offset);
-
-
 /* The next bit is modified from OSC-timetag.c. */
 /*
 
@@ -129,50 +125,6 @@ static OSCTimeTag OSCTT_offsetms(const OSCTimeTag org, double msec_offset)
     tt.fraction = fract%0xFFFFFFFF;
     return tt;
 }
-
-static OSCTimeTag OSCTT_CurrentTimePlusOffset(uint32_t offset)
-{ /* offset is in microseconds */
-    return OSCTT_offsetms(OSCTT_Now(), ((double)offset)*0.001);
-}
-
-
-/* these are globals so other packOSCs will be in lockstep */
-OSCTimeTag packOSCStartTimeTag;
-double packOSCLogicalStartTime;
-
-#ifdef PD
-/* Use the global time that was set once by the first packOSC instance, to avoid OS/Pd clock jitter  */
-static OSCTimeTag OSCTT_CurrentPdTimePlusOffset(uint32_t offset)
-{ /* offset is in microseconds */
-    OSCTimeTag tt;
-    static unsigned int onemillion = 1000000;
-    static unsigned int onethousand = 1000;
-
-    /* milliseconds since 'our' epoch */
-    double delta_ms = clock_gettimesince(packOSCLogicalStartTime);
-
-
-    /* First get the seconds right */
-    tt.seconds = floor(delta_ms/onethousand) +
-        packOSCStartTimeTag.seconds +
-        (unsigned) offset/onemillion;
-    /* Now get the fractional part. */
-    tt.fraction = (unsigned) (delta_ms*onethousand - tt.seconds*onemillion) +
-        packOSCStartTimeTag.fraction +
-        (unsigned)(offset%onemillion); /* in usec */
-
-    if (tt.fraction > onemillion)
-    {
-        tt.fraction -= onemillion;
-        tt.seconds++;
-    }
-    tt.fraction *= (unsigned) TWO_TO_THE_32_OVER_ONE_MILLION; /* convert usec to 32-bit fraction of 1 sec */
-    if(sys_verbose)
-        logpost(0, 3, "delta_ms %lf timetag: %ldsec %ld\n",
-		delta_ms, (long int)tt.seconds, (long int)tt.fraction);
-    return tt;
-}
-#endif
 
 #endif // _OSC_timetag_h
 /* end of OSC_timetag.h */
