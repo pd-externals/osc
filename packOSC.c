@@ -298,7 +298,8 @@ static void *packOSC_new(void)
     delta_ms = clock_gettimesince(packOSCLogicalStartTime);
     packOSCs++;
     if(packOSC_verbose)
-        logpost(x, 3, "packOSC[%d]: delta_ms %lf timetag: %ldsec %ld\n", packOSCs, delta_ms, packOSCStartTimeTag.seconds, packOSCStartTimeTag.fraction);
+        logpost(x, 3, "packOSC[%d]: delta_ms %lf timetag: %ldsec %ld\n", packOSCs,
+		delta_ms, (long int)packOSCStartTimeTag.seconds, (long int)packOSCStartTimeTag.fraction);
     return (x);
 fail:
     if(x->x_bufferForOSCbuf != NULL) freebytes(x->x_bufferForOSCbuf, (long)(sizeof(char)*x->x_buflength));
@@ -379,7 +380,7 @@ static void packOSC_setbufsize(t_packOSC *x, t_floatarg f)
     if(x->x_bufferForOSClist == NULL)
         pd_error(x, "packOSC unable to allocate %lu bytes for x_bufferForOSClist", (long)(sizeof(t_atom)*x->x_buflength));
     OSC_initBuffer(x->x_oscbuf, x->x_buflength, x->x_bufferForOSCbuf);
-    logpost(x, 3, "packOSC: bufsize is now %d",x->x_buflength);
+    logpost(x, 3, "packOSC: bufsize is now %ld", (long unsigned int)x->x_buflength);
 }
 
 
@@ -1596,7 +1597,8 @@ static OSCTimeTag OSCTT_CurrentPdTimePlusOffset(uint32_t offset)
     }
     tt.fraction *= (unsigned) TWO_TO_THE_32_OVER_ONE_MILLION; /* convert usec to 32-bit fraction of 1 sec */
     if(packOSC_verbose)
-        logpost(0, 3, "delta_ms %lf timetag: %ldsec %ld\n", delta_ms, tt.seconds, tt.fraction);
+        logpost(0, 3, "delta_ms %lf timetag: %ldsec %ld\n",
+		delta_ms, (long int)tt.seconds, (long int)tt.fraction);
     return tt;
 }
 
