@@ -31,16 +31,16 @@ The OSC webpage is http://cnmat.cnmat.berkeley.edu/OpenSoundControl
 
   To-do:
 
-  	Match a pattern against a pattern?
+  Match a pattern against a pattern?
       [Done: Only Slash-Star is allowed, see MyPatternMatch.]
-  	Declare outlet types / distinguish leaf nodes from other children
-  	More sophisticated (2-pass?) allmessages scheme
-  	set message?
+  Declare outlet types / distinguish leaf nodes from other children
+  More sophisticated (2-pass?) allmessages scheme
+  set message?
 
 
-	pd
-	-------------
-		-- tweaks for Win32    www.zeggz.com/raf	13-April-2002
+pd
+-------------
+-- tweaks for Win32    www.zeggz.com/raf 13-April-2002
 
 */
 /* OSC-pattern-match.c header follows: */
@@ -118,7 +118,7 @@ static void StrCopyUntilNthSlash(char *target, const char *source, int n);
 /* from
     OSC-pattern-match.c
 */
-static const char *theWholePattern;	/* Just for warning messages */
+static const char *theWholePattern; /* Just for warning messages */
 static int MatchBrackets (const char *pattern, const char *test);
 static int MatchList (const char *pattern, const char *test);
 static int PatternMatch (const char *  pattern, const char * test);
