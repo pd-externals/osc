@@ -129,7 +129,7 @@ static int OSC_padStringWithAnExtraStupidComma(char *dest, const char *str);
 static int OSC_WriteStringPadding(char *dest, int i);
 static int OSC_WriteBlobPadding(char *dest, int i);
 
-static int CheckTypeTag(const OSCbuf *buf, char expectedType);
+static int CheckTypeTag(void *x, const OSCbuf *buf, char expectedType);
 
 /* Initialize the given OSCbuf.  The user of this module must pass in the
    block of memory that this OSCbuf will use for a buffer, and the number of
@@ -157,7 +157,7 @@ static int OSC_isBufferDone(const OSCbuf *buf);
    want to re-use this OSCbuf for the next packet.)  */
 static char *OSC_getPacket(const OSCbuf *buf);
 static int OSC_packetSize(const OSCbuf *buf);
-static int OSC_CheckOverflow(const OSCbuf *buf, size_t bytesNeeded);
+static int OSC_CheckOverflow(void *x, const OSCbuf *buf, size_t bytesNeeded);
 
 /* Here's the basic model for building up OSC messages in an OSCbuf:
     - Make sure the OSCbuf has been initialized with OSC_initBuffer().
@@ -182,15 +182,15 @@ static int OSC_CheckOverflow(const OSCbuf *buf, size_t bytesNeeded);
         add another message to it.
 */
 
-static int OSC_openBundle(OSCbuf *buf, OSCTimeTag tt);
-static int OSC_closeBundle(OSCbuf *buf);
-static int OSC_writeAddress(OSCbuf *buf, char *name);
-static int OSC_writeAddressAndTypes(OSCbuf *buf, char *name, char *types);
-static int OSC_writeFloatArg(OSCbuf *buf, float arg);
-static int OSC_writeIntArg(OSCbuf *buf, uint32_t arg);
-static int OSC_writeBlobArg(OSCbuf *buf, typedArg *arg, size_t nArgs);
-static int OSC_writeStringArg(OSCbuf *buf, const char *arg);
-static int OSC_writeNullArg(OSCbuf *buf, char type);
+static int OSC_openBundle(void *x, OSCbuf *buf, OSCTimeTag tt);
+static int OSC_closeBundle(void *x, OSCbuf *buf);
+static int OSC_writeAddress(void *x, OSCbuf *buf, char *name);
+static int OSC_writeAddressAndTypes(void *x, OSCbuf *buf, char *name, char *types);
+static int OSC_writeFloatArg(void *x, OSCbuf *buf, float arg);
+static int OSC_writeIntArg(void *x, OSCbuf *buf, uint32_t arg);
+static int OSC_writeBlobArg(void *x, OSCbuf *buf, typedArg *arg, size_t nArgs);
+static int OSC_writeStringArg(void *x, OSCbuf *buf, const char *arg);
+static int OSC_writeNullArg(void *x, OSCbuf *buf, char type);
 
 /* How many bytes will be needed in the OSC format to hold the given
    string?  The length of the string, plus the null char, plus any padding
@@ -305,7 +305,7 @@ static void packOSC_openbundle(t_packOSC *x)
           tt = OSCTT_offsetms(OSCTT_Now(), delta);
       }
     }
-    result = OSC_openBundle(x->x_oscbuf, tt);
+    result = OSC_openBundle(x, x->x_oscbuf, tt);
     if (result != 0)
     { /* reset the buffer */
         OSC_initBuffer(x->x_oscbuf, x->x_buflength, x->x_bufferForOSCbuf);
@@ -318,7 +318,7 @@ static void packOSC_openbundle(t_packOSC *x)
 static void packOSC_closebundle(t_packOSC *x)
 {
     t_float bundledepth=(t_float)x->x_oscbuf->bundleDepth;
-    if (OSC_closeBundle(x->x_oscbuf))
+    if (OSC_closeBundle(x, x->x_oscbuf))
     {
         pd_error(x, "packOSC: Problem closing bundle.");
         return;
@@ -827,7 +827,7 @@ static int packOSC_writetypedmessage
     printf("packOSC_writetypedmessage: messageName %p (%s) typeStr %p (%s)\n",
         messageName, messageName, typeStr, typeStr);
 #endif
-    returnVal = OSC_writeAddressAndTypes(buf, messageName, typeStr);
+    returnVal = OSC_writeAddressAndTypes(x, buf, messageName, typeStr);
 
     if (returnVal)
     {
@@ -841,7 +841,7 @@ static int packOSC_writetypedmessage
 #ifdef DEBUG
             printf("packOSC_writetypedmessage: NULL [%c]\n", typeStr[i+1]);
 #endif
-            returnVal = OSC_writeNullArg(buf, typeStr[i+1]);
+            returnVal = OSC_writeNullArg(x, buf, typeStr[i+1]);
             ++i;
         }
         if (j < numArgs)
@@ -852,26 +852,26 @@ static int packOSC_writetypedmessage
 #ifdef DEBUG
                     printf("packOSC_writetypedmessage: int [%d]\n", args[j].datum.i);
 #endif
-                    returnVal = OSC_writeIntArg(buf, args[j].datum.i);
+                    returnVal = OSC_writeIntArg(x, buf, args[j].datum.i);
                     break;
                 case FLOAT_osc:
 #ifdef DEBUG
                     printf("packOSC_writetypedmessage: float [%f]\n", args[j].datum.f);
 #endif
-                    returnVal = OSC_writeFloatArg(buf, args[j].datum.f);
+                    returnVal = OSC_writeFloatArg(x, buf, args[j].datum.f);
                     break;
                 case STRING_osc:
 #ifdef DEBUG
                     printf("packOSC_writetypedmessage: string [%s]\n", args[j].datum.s);
 #endif
-                    returnVal = OSC_writeStringArg(buf, args[j].datum.s);
+                    returnVal = OSC_writeStringArg(x, buf, args[j].datum.s);
                     break;
                 case BLOB_osc:
                     /* write all the blob elements at once */
 #ifdef DEBUG
                     printf("packOSC_writetypedmessage calling OSC_writeBlobArg\n");
 #endif
-                    return OSC_writeBlobArg(buf, &args[j], numArgs-j);
+                    return OSC_writeBlobArg(x, buf, &args[j], numArgs-j);
                 default:
 
                     break; /* types with no data */
@@ -893,10 +893,10 @@ static int packOSC_writemessage(t_packOSC *x, OSCbuf *buf, char *messageName, in
 #ifdef DEBUG
         printf("packOSC_writemessage calling OSC_writeAddress with x->x_typetags %d\n", x->x_typetags);
 #endif
-        returnVal = OSC_writeAddress(buf, messageName);
+        returnVal = OSC_writeAddress(x, buf, messageName);
         if (returnVal)
         {
-            post("packOSC: Problem writing address.");
+            pd_error(x, "packOSC: Problem writing address.");
         }
     }
     else
@@ -936,7 +936,7 @@ static int packOSC_writemessage(t_packOSC *x, OSCbuf *buf, char *messageName, in
 #ifdef DEBUG
         printf("packOSC_writemessage calling OSC_writeAddressAndTypes with x->x_typetags %d typeTags %p (%s)\n", x->x_typetags, typeTags, typeTags);
 #endif
-        returnVal = OSC_writeAddressAndTypes(buf, messageName, typeTags);
+        returnVal = OSC_writeAddressAndTypes(x, buf, messageName, typeTags);
         if (returnVal)
         {
             pd_error(x, "packOSC: Problem writing address.");
@@ -948,19 +948,19 @@ static int packOSC_writemessage(t_packOSC *x, OSCbuf *buf, char *messageName, in
         switch (args[j].type)
         {
             case INT_osc:
-                returnVal = OSC_writeIntArg(buf, args[j].datum.i);
+                returnVal = OSC_writeIntArg(x, buf, args[j].datum.i);
                 break;
             case FLOAT_osc:
-                returnVal = OSC_writeFloatArg(buf, args[j].datum.f);
+                returnVal = OSC_writeFloatArg(x, buf, args[j].datum.f);
                 break;
             case STRING_osc:
-                returnVal = OSC_writeStringArg(buf, args[j].datum.s);
+                returnVal = OSC_writeStringArg(x, buf, args[j].datum.s);
                 break;
             case BLOB_osc:
 #ifdef DEBUG
                 printf("packOSC_writemessage calling OSC_writeBlobArg\n");
 #endif
-                return OSC_writeBlobArg(buf, &args[j], numArgs-j); /* All the remaining args are blob */
+                return OSC_writeBlobArg(x, buf, &args[j], numArgs-j); /* All the remaining args are blob */
             default:
                 break; /* just skip bad types (which we won't get anyway unless this code is buggy) */
         }
@@ -990,12 +990,12 @@ static void packOSC_sendbuffer(t_packOSC *x)
 #endif
     if (OSC_isBufferEmpty(x->x_oscbuf))
     {
-        post("packOSC_sendbuffer() called but buffer empty");
+        pd_error(x, "packOSC_sendbuffer() called but buffer empty");
         return;
     }
     if (!OSC_isBufferDone(x->x_oscbuf))
     {
-        post("packOSC_sendbuffer() called but buffer not ready!, not exiting");
+        pd_error(x, "packOSC_sendbuffer() called but buffer not ready!, not exiting");
         return;
     }
     length = OSC_packetSize(x->x_oscbuf);
@@ -1080,11 +1080,11 @@ static int OSC_packetSize(const OSCbuf *buf)
     return (buf->bufptr - buf->buffer);
 }
 
-static int OSC_CheckOverflow(const OSCbuf *buf, size_t bytesNeeded)
+static int OSC_CheckOverflow(void *x, const OSCbuf *buf, size_t bytesNeeded)
 {
     if ((bytesNeeded) > OSC_freeSpaceInBuffer(buf))
     {
-        pd_error(NULL, "packOSC: buffer overflow");
+        pd_error(x, "packOSC: buffer overflow");
         return 1;
     }
     return 0;
@@ -1096,27 +1096,27 @@ static void PatchMessageSize(OSCbuf *buf)
     *(buf->thisMsgSize) = htonl(size);
 }
 
-static int OSC_openBundle(OSCbuf *buf, OSCTimeTag tt)
+static int OSC_openBundle(void *x, OSCbuf *buf, OSCTimeTag tt)
 {
     if (buf->state == ONE_MSG_ARGS)
     {
-        post("packOSC: Can't open a bundle in a one-message packet");
+        pd_error(x, "packOSC: Can't open a bundle in a one-message packet");
         return 3;
     }
 
     if (buf->state == DONE)
     {
-        post("packOSC: This packet is finished; can't open a new bundle");
+        pd_error(x, "packOSC: This packet is finished; can't open a new bundle");
         return 4;
     }
 
     if (++(buf->bundleDepth) >= MAX_BUNDLE_NESTING)
     {
-        post("packOSC: Bundles nested too deeply: maybe change MAX_BUNDLE_NESTING from %d and recompile", MAX_BUNDLE_NESTING);
+        pd_error(x, "packOSC: Bundles nested too deeply: maybe change MAX_BUNDLE_NESTING from %d and recompile", MAX_BUNDLE_NESTING);
         return 2;
     }
 
-    if (CheckTypeTag(buf, '\0')) return 9;
+    if (CheckTypeTag(x, buf, '\0')) return 9;
 
     if (buf->state == GET_ARGS)
     {
@@ -1126,13 +1126,13 @@ static int OSC_openBundle(OSCbuf *buf, OSCTimeTag tt)
     if (buf->state == EMPTY)
     {
         /* Need 16 bytes for "#bundle" and time tag */
-        if(OSC_CheckOverflow(buf, 16)) return 1;
+        if(OSC_CheckOverflow(x, buf, 16)) return 1;
     }
     else
     {
         /* This bundle is inside another bundle, so we need to leave
           a blank size count for the size of this current bundle. */
-        if(OSC_CheckOverflow(buf, 20))return 1;
+        if(OSC_CheckOverflow(x, buf, 20))return 1;
         *((uint32_t *)buf->bufptr) = 0xaaaaaaaa;
         buf->prevCounts[buf->bundleDepth] = (uint32_t *)buf->bufptr;
 
@@ -1166,16 +1166,16 @@ static int OSC_openBundle(OSCbuf *buf, OSCTimeTag tt)
 }
 
 
-static int OSC_closeBundle(OSCbuf *buf)
+static int OSC_closeBundle(void *x, OSCbuf *buf)
 {
     if (buf->bundleDepth == 0)
     {
         /* This handles EMPTY, ONE_MSG, ARGS, and DONE */
-        post("packOSC: Can't close bundle: no bundle is open!");
+        pd_error(x, "packOSC: Can't close bundle: no bundle is open!");
         return 5;
     }
 
-    if (CheckTypeTag(buf, '\0')) return 9;
+    if (CheckTypeTag(x, buf, '\0')) return 9;
 
     if (buf->state == GET_ARGS)
     {
@@ -1201,7 +1201,7 @@ static int OSC_closeBundle(OSCbuf *buf)
     return 0;
 }
 
-static int OSC_writeAddress(OSCbuf *buf, char *name)
+static int OSC_writeAddress(void *x, OSCbuf *buf, char *name)
 {
     uint32_t paddedLength;
 #ifdef DEBUG
@@ -1209,17 +1209,17 @@ static int OSC_writeAddress(OSCbuf *buf, char *name)
 #endif
     if (buf->state == ONE_MSG_ARGS)
     {
-        post("packOSC: This packet is not a bundle, so you can't write another address");
+        pd_error(x, "packOSC: This packet is not a bundle, so you can't write another address");
         return 7;
     }
 
     if (buf->state == DONE)
     {
-        post("packOSC: This packet is finished; can't write another address");
+        pd_error(x, "packOSC: This packet is finished; can't write another address");
         return 8;
     }
 
-    if (CheckTypeTag(buf, '\0')) return 9;
+    if (CheckTypeTag(x, buf, '\0')) return 9;
 
     paddedLength = OSC_effectiveStringLength(name);
 #ifdef DEBUG
@@ -1229,13 +1229,13 @@ static int OSC_writeAddress(OSCbuf *buf, char *name)
     if (buf->state == EMPTY)
     {
         /* This will be a one-message packet, so no sizes to worry about */
-        if(OSC_CheckOverflow(buf, paddedLength))return 1;
+        if(OSC_CheckOverflow(x, buf, paddedLength))return 1;
         buf->state = ONE_MSG_ARGS;
     }
     else
     {
         /* GET_ARGS or NEED_COUNT */
-        if(OSC_CheckOverflow(buf, 4+paddedLength))return 1;
+        if(OSC_CheckOverflow(x, buf, 4+paddedLength))return 1;
         if (buf->state == GET_ARGS)
         {
             /* Close the old message */
@@ -1255,7 +1255,7 @@ static int OSC_writeAddress(OSCbuf *buf, char *name)
     return 0;
 }
 
-static int OSC_writeAddressAndTypes(OSCbuf *buf, char *name, char *types)
+static int OSC_writeAddressAndTypes(void *x, OSCbuf *buf, char *name, char *types)
 {
     int      result;
     uint32_t paddedLength;
@@ -1264,15 +1264,15 @@ static int OSC_writeAddressAndTypes(OSCbuf *buf, char *name, char *types)
     printf("OSC_writeAddressAndTypes buf %p name %s types %s\n", buf, name, types);
 #endif
     if (buf == NULL) return 10;
-    if (CheckTypeTag(buf, '\0')) return 9;
+    if (CheckTypeTag(x, buf, '\0')) return 9;
 
-    result = OSC_writeAddress(buf, name);
+    result = OSC_writeAddress(x, buf, name);
 
     if (result) return result;
 
     paddedLength = OSC_effectiveStringLength(types);
 
-    if(OSC_CheckOverflow(buf, paddedLength))return 1;
+    if(OSC_CheckOverflow(x, buf, paddedLength))return 1;
 
     buf->typeStringPtr = buf->bufptr + 1; /* skip comma */
     buf->bufptr += OSC_padString(buf->bufptr, types);
@@ -1286,7 +1286,7 @@ static int OSC_writeAddressAndTypes(OSCbuf *buf, char *name, char *types)
     return 0;
 }
 
-static int CheckTypeTag(const OSCbuf *buf, char expectedType)
+static int CheckTypeTag(void *x, const OSCbuf *buf, char expectedType)
 {
     char c;
     const char*typeStringPtr = buf->typeStringPtr;
@@ -1304,16 +1304,16 @@ static int CheckTypeTag(const OSCbuf *buf, char expectedType)
         {
             if (expectedType == '\0')
             {
-                post("packOSC: According to the type tag (%c) I expected more arguments.", c);
+                pd_error(x, "packOSC: According to the type tag (%c) I expected more arguments.", c);
             }
             else if (*typeStringPtr == '\0')
             {
-                post("packOSC: According to the type tag I didn't expect any more arguments.");
+                pd_error(x, "packOSC: According to the type tag I didn't expect any more arguments.");
             }
             else
             {
-                post("packOSC: According to the type tag I expected an argument of a different type.");
-                post("* Expected %c, string now %s\n", expectedType, typeStringPtr);
+                pd_error(x, "packOSC: According to the type tag I expected an argument of a different type.");
+                pd_error(x, "* Expected %c, string now %s\n", expectedType, typeStringPtr);
             }
             return 9;
         }
@@ -1322,7 +1322,7 @@ static int CheckTypeTag(const OSCbuf *buf, char expectedType)
     return 0;
 }
 
-static int OSC_writeFloatArg(OSCbuf *buf, float arg)
+static int OSC_writeFloatArg(void *x, OSCbuf *buf, float arg)
 {
     union intfloat32
     {
@@ -1331,9 +1331,9 @@ static int OSC_writeFloatArg(OSCbuf *buf, float arg)
     };
     union intfloat32 if32;
 
-    if(OSC_CheckOverflow(buf, 4))return 1;
+    if(OSC_CheckOverflow(x, buf, 4))return 1;
 
-    if (CheckTypeTag(buf, 'f')) return 9;
+    if (CheckTypeTag(x, buf, 'f')) return 9;
 
     /* Pretend arg is a long int so we can use htonl() */
     if32.f = arg;
@@ -1346,10 +1346,10 @@ static int OSC_writeFloatArg(OSCbuf *buf, float arg)
     return 0;
 }
 
-static int OSC_writeIntArg(OSCbuf *buf, uint32_t arg)
+static int OSC_writeIntArg(void *x, OSCbuf *buf, uint32_t arg)
 {
-    if(OSC_CheckOverflow(buf, 4))return 1;
-    if (CheckTypeTag(buf, 'i')) return 9;
+    if(OSC_CheckOverflow(x, buf, 4))return 1;
+    if (CheckTypeTag(x, buf, 'i')) return 9;
 
     *((uint32_t *) buf->bufptr) = htonl(arg);
     buf->bufptr += 4;
@@ -1358,14 +1358,14 @@ static int OSC_writeIntArg(OSCbuf *buf, uint32_t arg)
     return 0;
 }
 
-static int OSC_writeBlobArg(OSCbuf *buf, typedArg *arg, size_t nArgs)
+static int OSC_writeBlobArg(void *x, OSCbuf *buf, typedArg *arg, size_t nArgs)
 {
     size_t i;
     unsigned char b;
 
 /* pack all the args as single bytes following a 4-byte length */
-    if(OSC_CheckOverflow(buf, nArgs+4))return 1;
-    if (CheckTypeTag(buf, 'b')) return 9;
+    if(OSC_CheckOverflow(x, buf, nArgs+4))return 1;
+    if (CheckTypeTag(x, buf, 'b')) return 9;
 
     *((uint32_t *) buf->bufptr) = htonl(nArgs);
 #ifdef DEBUG
@@ -1377,7 +1377,7 @@ static int OSC_writeBlobArg(OSCbuf *buf, typedArg *arg, size_t nArgs)
     {
         if (arg[i].type != BLOB_osc)
         {
-            pd_error(NULL, "packOSC: blob element %lu not blob type", i);
+            pd_error(x, "packOSC: blob element %lu not blob type", i);
             return 9;
         }
         b = (unsigned char)((arg[i].datum.i)&0x0FF);/* force int to 8-bit byte */
@@ -1392,11 +1392,11 @@ static int OSC_writeBlobArg(OSCbuf *buf, typedArg *arg, size_t nArgs)
     return 0;
 }
 
-static int OSC_writeStringArg(OSCbuf *buf, const char *arg)
+static int OSC_writeStringArg(void *x, OSCbuf *buf, const char *arg)
 {
     int len;
 
-    if (CheckTypeTag(buf, 's')) return 9;
+    if (CheckTypeTag(x, buf, 's')) return 9;
 
     len = OSC_effectiveStringLength(arg);
 
@@ -1407,14 +1407,14 @@ static int OSC_writeStringArg(OSCbuf *buf, const char *arg)
           (with a double comma) so it won't look like a type
           tag string. */
 
-        if(OSC_CheckOverflow(buf, len+4))return 1; /* Too conservative */
+        if(OSC_CheckOverflow(x, buf, len+4))return 1; /* Too conservative */
         buf->bufptr +=
         OSC_padStringWithAnExtraStupidComma(buf->bufptr, arg);
 
     }
     else
     {
-        if(OSC_CheckOverflow(buf, len))return 1;
+        if(OSC_CheckOverflow(x, buf, len))return 1;
         buf->bufptr += OSC_padString(buf->bufptr, arg);
     }
 
@@ -1423,10 +1423,10 @@ static int OSC_writeStringArg(OSCbuf *buf, const char *arg)
 
 }
 
-static int OSC_writeNullArg(OSCbuf *buf, char type)
+static int OSC_writeNullArg(void *x, OSCbuf *buf, char type)
 { /* Don't write any data, just check the type tag */
-    if(OSC_CheckOverflow(buf, 4))return 1;
-    if (CheckTypeTag(buf, type)) return 9;
+    if(OSC_CheckOverflow(x, buf, 4))return 1;
+    if (CheckTypeTag(x, buf, type)) return 9;
     buf->gettingFirstUntypedArg = 0;
     return 0;
 }
