@@ -1377,7 +1377,7 @@ static int OSC_writeBlobArg(void *x, OSCbuf *buf, typedArg *arg, size_t nArgs)
     {
         if (arg[i].type != BLOB_osc)
         {
-            pd_error(x, "packOSC: blob element %lu not blob type", i);
+            pd_error(x, "packOSC: blob element %lu not blob type", (long unsigned)i);
             return 9;
         }
         b = (unsigned char)((arg[i].datum.i)&0x0FF);/* force int to 8-bit byte */
