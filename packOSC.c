@@ -221,6 +221,8 @@ typedef struct _packOSC
     const char  *x_prefix;
     int         x_reentry_count;
     int         x_use_pd_time;
+    OSCTimeTag  x_pd_timetag;
+    double      x_pd_timeref;
 } t_packOSC;
 
 static void *packOSC_new(void);
@@ -229,6 +231,7 @@ static void packOSC_openbundle(t_packOSC *x);
 static void packOSC_closebundle(t_packOSC *x);
 static void packOSC_settypetags(t_packOSC *x, t_floatarg f);
 static void packOSC_setbufsize(t_packOSC *x, t_floatarg f);
+static void packOSC_usepdtime(t_packOSC *x, t_floatarg f);
 static void packOSC_setTimeTagOffset(t_packOSC *x, t_floatarg f);
 static void packOSC_sendtyped(t_packOSC *x, t_symbol *s, int argc, t_atom *argv);
 static void packOSC_send_type_forced(t_packOSC *x, t_symbol *s, int argc, t_atom *argv);
@@ -246,7 +249,6 @@ static void packOSC_sendbuffer(t_packOSC *x);
 
 static void *packOSC_new(void)
 {
-    double delta_ms;
     t_packOSC *x = (t_packOSC *)pd_new(packOSC_class);
     x->x_typetags = 1; /* set typetags to 1 by default */
     x->x_bundle = 0; /* bundle is closed */
@@ -268,17 +270,8 @@ static void *packOSC_new(void)
     x->x_bdpthout = outlet_new(&x->x_obj, &s_float);
     x->x_timeTagOffset = -1; /* immediately */
     x->x_reentry_count = 0;
-    x->x_use_pd_time = 1; /* TODO set this somehwere else */
-    if  (0 == packOSCLogicalStartTime)
-    {
-        packOSCLogicalStartTime = clock_getlogicaltime();
-        packOSCStartTimeTag = OSCTT_CurrentTimePlusOffset(0L);
-    }
-    delta_ms = clock_gettimesince(packOSCLogicalStartTime);
-    packOSCs++;
-    if(packOSC_verbose)
-        logpost(x, 3, "packOSC[%d]: delta_ms %lf timetag: %ldsec %ld\n", packOSCs,
-		delta_ms, (long int)packOSCStartTimeTag.seconds, (long int)packOSCStartTimeTag.fraction);
+
+    packOSC_usepdtime(x, 1.);
     return (x);
 fail:
     if(x->x_bufferForOSCbuf != NULL) freebytes(x->x_bufferForOSCbuf, (long)(sizeof(char)*x->x_buflength));
@@ -306,13 +299,20 @@ static void packOSC_openbundle(t_packOSC *x)
 {
     int result;
     t_float bundledepth=(t_float)x->x_oscbuf->bundleDepth;
+    OSCTimeTag tt = OSCTT_Immediately();
 
-    if (x->x_timeTagOffset == -1)
-        result = OSC_openBundle(x->x_oscbuf, OSCTT_Immediately());
-    else if (x->x_use_pd_time)
-        result = OSC_openBundle(x->x_oscbuf, OSCTT_CurrentPdTimePlusOffset((uint32_t)x->x_timeTagOffset));
-    else
-        result = OSC_openBundle(x->x_oscbuf, OSCTT_CurrentTimePlusOffset((uint32_t)x->x_timeTagOffset));
+    if (x->x_timeTagOffset == -1) {
+      /* immediately */
+    } else {
+      double delta = x->x_timeTagOffset*0.001;
+      if (x->x_use_pd_time) {
+          delta += clock_gettimesince(x->x_pd_timeref);
+          tt = OSCTT_offsetms(x->x_pd_timetag, delta);
+      } else {
+          tt = OSCTT_offsetms(OSCTT_Now(), delta);
+      }
+    }
+    result = OSC_openBundle(x->x_oscbuf, tt);
     if (result != 0)
     { /* reset the buffer */
         OSC_initBuffer(x->x_oscbuf, x->x_buflength, x->x_bufferForOSCbuf);
@@ -362,6 +362,18 @@ static void packOSC_setbufsize(t_packOSC *x, t_floatarg f)
     logpost(x, 3, "packOSC: bufsize is now %ld", (long unsigned int)x->x_buflength);
 }
 
+static void packOSC_usepdtime(t_packOSC *x, t_floatarg f)
+{
+  x->x_use_pd_time = (int)f;
+  if(x->x_use_pd_time) {
+    x->x_pd_timetag = OSCTT_Now();
+    x->x_pd_timeref = clock_getlogicaltime();
+  } else {
+    x->x_pd_timetag.seconds = x->x_pd_timetag.fraction = 0;
+    x->x_pd_timeref = 0;
+  }
+
+}
 
 static void packOSC_setTimeTagOffset(t_packOSC *x, t_floatarg f)
 {
