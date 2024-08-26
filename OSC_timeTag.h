@@ -116,6 +116,7 @@ static OSCTimeTag OSCTT_CurrentTimePlusOffset(uint32_t offset)
 OSCTimeTag packOSCStartTimeTag;
 double packOSCLogicalStartTime;
 
+#ifdef PD
 /* Use the global time that was set once by the first packOSC instance, to avoid OS/Pd clock jitter  */
 static OSCTimeTag OSCTT_CurrentPdTimePlusOffset(uint32_t offset)
 { /* offset is in microseconds */
@@ -147,6 +148,7 @@ static OSCTimeTag OSCTT_CurrentPdTimePlusOffset(uint32_t offset)
 		delta_ms, (long int)tt.seconds, (long int)tt.fraction);
     return tt;
 }
+#endif
 
 #endif // _OSC_timetag_h
 /* end of OSC_timetag.h */
