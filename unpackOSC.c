@@ -92,7 +92,6 @@ static void unpackOSC_PrintTypeTaggedArgs(t_atom *data_at, int *data_atc, void *
 static void unpackOSC_PrintHeuristicallyTypeGuessedArgs(t_atom *data_at, int *data_atc, void *v, int n, int skipComma);
 static char *unpackOSC_DataAfterAlignedString(char *string, char *boundary);
 static int unpackOSC_IsNiceString(char *string, char *boundary);
-static t_float unpackOSC_DeltaTime(OSCTimeTag tt);
 
 static void *unpackOSC_new(void)
 {
@@ -175,6 +174,7 @@ static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
 
     if ((argc >= 8) && (strncmp(buf, "#bundle", 8) == 0))
     { /* This is a bundle message. */
+        double delta=0;
 #ifdef DEBUG
         printf("unpackOSC: bundle msg:\n");
 #endif
@@ -196,7 +196,13 @@ static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
         tt.seconds = ntohl(*((uint32_t *)(buf+8)));
         tt.fraction = ntohl(*((uint32_t *)(buf+12)));
         /* pd can use a delay in milliseconds */
-        outlet_float(x->x_delay_out, unpackOSC_DeltaTime(tt));
+        if (tt.seconds == 0 && tt.fraction ==1) {
+            delta = 0;
+        } else {
+            OSCTimeTag reference = OSCTT_Now();
+            delta = OSCTT_getoffsetms(tt, reference);
+        }
+        outlet_float(x->x_delay_out, delta);
         /* Note: if we wanted to actually use the time tag as a little-endian
           64-bit int, we'd have to word-swap the two 32-bit halves of it */
 
@@ -647,48 +653,4 @@ static int unpackOSC_IsNiceString(char *string, char *boundary)
     return 1;
 }
 
-#define SECONDS_FROM_1900_to_1970 2208988800LL /* 17 leap years */
-#define TWO_TO_THE_32_OVER_ONE_MILLION 4295LL
-#define ONE_MILLION_OVER_TWO_TO_THE_32 0.00023283064365386963
-
-/* return the time difference in milliseconds between an OSC timetag and now */
-static t_float unpackOSC_DeltaTime(OSCTimeTag tt)
-{
-    static double onemillion = 1000000.0f;
-#ifdef _WIN32
-    static double onethousand = 1000.0f;
-#endif /* ifdef _WIN32 */
-
-    if (tt.fraction == 1 && tt.seconds == 0) return 0.0; /* immediate */
-    else
-    {
-        OSCTimeTag ttnow;
-        double  ttusec, nowusec, delta;
-#ifdef _WIN32
-        struct _timeb tb;
-
-        _ftime(&tb); /* find now */
-        /* First get the seconds right */
-        ttnow.seconds = (unsigned) SECONDS_FROM_1900_to_1970 + (unsigned) tb.time;
-        /* find usec in tt */
-        ttusec = tt.seconds*onemillion + ONE_MILLION_OVER_TWO_TO_THE_32*tt.fraction;
-        nowusec = ttnow.seconds*onemillion + tb.millitm*onethousand;
-#else
-        struct timeval tv;
-        struct timezone tz;
-
-        gettimeofday(&tv, &tz); /* find now */
-        /* First get the seconds right */
-        ttnow.seconds = (unsigned) SECONDS_FROM_1900_to_1970 + (unsigned) tv.tv_sec;
-        /* find usec in tt */
-        ttusec = tt.seconds*onemillion + ONE_MILLION_OVER_TWO_TO_THE_32*tt.fraction;
-        nowusec = ttnow.seconds*onemillion + tv.tv_usec;
-#endif /* ifdef _WIN32 */
-        /* subtract now from tt to get delta time */
-        /* if (ttusec < nowusec) return 0.0; */
-        /*negative delays are all right */
-        delta = ttusec - nowusec;
-        return (t_float)(delta*0.001f);
-    }
-}
 /* end of unpackOSC.c */
