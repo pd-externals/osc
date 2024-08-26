@@ -36,9 +36,14 @@ typedef struct _OSCTimeTag
     uint32_t fraction;
 } OSCTimeTag;
 
+#define SECONDS_FROM_1900_to_1970 2208988800LL /* 17 leap years */
+#define TWO_TO_THE_32_OVER_ONE_MILLION 4295LL
+
+
+
 static OSCTimeTag OSCTT_Immediately(void);
 static OSCTimeTag OSCTT_Infinite(void);
-
+static OSCTimeTag OSCTT_Now(void);
 
 static OSCTimeTag OSCTT_CurrentTimePlusOffset(uint32_t offset);
 static OSCTimeTag OSCTT_CurrentPdTimePlusOffset(uint32_t offset);
@@ -70,45 +75,64 @@ static OSCTimeTag OSCTT_Infinite(void)
     return tt;
 }
 
-#define SECONDS_FROM_1900_to_1970 2208988800LL /* 17 leap years */
-#define TWO_TO_THE_32_OVER_ONE_MILLION 4295LL
-
-static OSCTimeTag OSCTT_CurrentTimePlusOffset(uint32_t offset)
-{ /* offset is in microseconds */
+static OSCTimeTag OSCTT_Now(void)
+{
     OSCTimeTag tt;
-    static unsigned int onemillion = 1000000;
 #ifdef _WIN32
-    static unsigned int onethousand = 1000;
     struct _timeb tb;
-
     _ftime(&tb);
 
     /* First get the seconds right */
     tt.seconds = (unsigned)SECONDS_FROM_1900_to_1970 +
-        (unsigned)tb.time+
-        (unsigned)offset/onemillion;
+      (unsigned)tb.time;
     /* Now get the fractional part. */
-    tt.fraction = (unsigned)tb.millitm*onethousand + (unsigned)(offset%onemillion); /* in usec */
+    tt.fraction = (unsigned)tb.millitm*1000;
 #else
     struct timeval tv;
     struct timezone tz;
-
     gettimeofday(&tv, &tz);
 
     /* First get the seconds right */
     tt.seconds = (unsigned) SECONDS_FROM_1900_to_1970 +
-        (unsigned) tv.tv_sec +
-        (unsigned) offset/onemillion;
+      (unsigned) tv.tv_sec;
     /* Now get the fractional part. */
-    tt.fraction = (unsigned) tv.tv_usec + (unsigned)(offset%onemillion); /* in usec */
+    tt.fraction = (unsigned) tv.tv_usec;
 #endif
-    if (tt.fraction > onemillion)
-    {
-        tt.fraction -= onemillion;
-        tt.seconds++;
-    }
     tt.fraction *= (unsigned) TWO_TO_THE_32_OVER_ONE_MILLION; /* convert usec to 32-bit fraction of 1 sec */
     return tt;
+}
+
+
+/* get offset between two timestamps in ms */
+static double OSCTT_getoffsetms(const OSCTimeTag a, const OSCTimeTag reference)
+{
+  const double fract2ms = 1000./4294967296.;
+  double d_sec = ((double)a.seconds  -(double)reference.seconds);
+  double d_msec = ((double)a.fraction-(double)reference.fraction) * fract2ms;
+  return d_sec * 1000. + d_msec;
+}
+
+static OSCTimeTag OSCTT_offsetms(const OSCTimeTag org, double msec_offset)
+{
+    OSCTimeTag tt;
+    const double fract2ms = 1000./4294967296.;
+    const double ms2fract = 4294967296./1000.;
+    double secs_off = floor(msec_offset*0.001);
+    msec_offset -= secs_off*1000.;
+    int64_t sec  = org.seconds + (int64_t)secs_off;
+    int64_t fract = (int64_t)(((double)org.fraction * fract2ms + msec_offset)*ms2fract);
+
+    sec += (fract>>32);
+    fract %= 0xFFFFFFFF;
+
+    tt.seconds = sec%0xFFFFFFFF;
+    tt.fraction = fract%0xFFFFFFFF;
+    return tt;
+}
+
+static OSCTimeTag OSCTT_CurrentTimePlusOffset(uint32_t offset)
+{ /* offset is in microseconds */
+    return OSCTT_offsetms(OSCTT_Now(), ((double)offset)*0.001);
 }
 
 
