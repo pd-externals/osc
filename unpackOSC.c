@@ -80,12 +80,17 @@ typedef struct _unpackOSC
     int         x_recursion_level;/* number of times we reenter unpackOSC_list */
     int         x_abort_bundle;/* non-zero if unpackOSC_list is not well formed */
     int         x_reentry_count;
+
+    int         x_use_pd_time;
+    OSCTimeTag  x_pd_timetag;
+    double      x_pd_timeref;
 } t_unpackOSC;
 
 void unpackOSC_setup(void);
 static void *unpackOSC_new(void);
 static void unpackOSC_free(t_unpackOSC *x);
 static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv);
+static void unpackOSC_usepdtime(t_unpackOSC *x, t_floatarg f);
 static int unpackOSC_path(t_atom *data_at, char *path);
 static void unpackOSC_Smessage(t_atom *data_at, int *data_atc, void *v, int n);
 static void unpackOSC_PrintTypeTaggedArgs(t_atom *data_at, int *data_atc, void *v, int n);
@@ -102,6 +107,8 @@ static void *unpackOSC_new(void)
     x->x_bundle_flag = 0;
     x->x_recursion_level = 0;
     x->x_abort_bundle = 0;
+
+    unpackOSC_usepdtime(x, 1.);
     return (x);
 }
 
@@ -115,6 +122,20 @@ void unpackOSC_setup(void)
         (t_newmethod)unpackOSC_new, (t_method)unpackOSC_free,
         sizeof(t_unpackOSC), 0, 0);
     class_addlist(unpackOSC_class, (t_method)unpackOSC_list);
+    class_addmethod(unpackOSC_class, (t_method)unpackOSC_usepdtime,
+        gensym("usepdtime"), A_FLOAT, 0);
+}
+static void unpackOSC_usepdtime(t_unpackOSC *x, t_floatarg f)
+{
+  x->x_use_pd_time = (int)f;
+  if(x->x_use_pd_time) {
+    x->x_pd_timetag = OSCTT_Now();
+    x->x_pd_timeref = clock_getlogicaltime();
+  } else {
+    x->x_pd_timetag.seconds = x->x_pd_timetag.fraction = 0;
+    x->x_pd_timeref = 0;
+  }
+
 }
 
 /* unpackOSC_list expects an OSC packet in the form of a list of floats on [0..255] */
@@ -174,7 +195,7 @@ static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
 
     if ((argc >= 8) && (strncmp(buf, "#bundle", 8) == 0))
     { /* This is a bundle message. */
-        double delta=0;
+        double delta = 0.;
 #ifdef DEBUG
         printf("unpackOSC: bundle msg:\n");
 #endif
@@ -199,8 +220,14 @@ static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
         if (tt.seconds == 0 && tt.fraction ==1) {
             delta = 0;
         } else {
-            OSCTimeTag reference = OSCTT_Now();
-            delta = OSCTT_getoffsetms(tt, reference);
+            OSCTimeTag now;
+            if (x->x_use_pd_time) {
+                double deltaref = clock_gettimesince(x->x_pd_timeref);
+                now = OSCTT_offsetms(x->x_pd_timetag, deltaref);
+            } else {
+                now = OSCTT_Now();
+            }
+            delta = OSCTT_getoffsetms(tt, now);
         }
         outlet_float(x->x_delay_out, delta);
         /* Note: if we wanted to actually use the time tag as a little-endian
