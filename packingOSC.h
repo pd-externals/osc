@@ -8,9 +8,7 @@
 #ifdef _WIN32
 # include <winsock2.h>
 #else
-# include <sys/types.h>
 # include <netinet/in.h>
-# include <ctype.h>
 #endif /* _WIN32 */
 
 /* Declarations */
