@@ -91,12 +91,12 @@ static void *unpackOSC_new(void);
 static void unpackOSC_free(t_unpackOSC *x);
 static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv);
 static void unpackOSC_usepdtime(t_unpackOSC *x, t_floatarg f);
-static int unpackOSC_path(t_atom *data_at, char *path);
-static void unpackOSC_Smessage(t_atom *data_at, int *data_atc, void *v, int n);
-static void unpackOSC_PrintTypeTaggedArgs(t_atom *data_at, int *data_atc, void *v, int n);
-static void unpackOSC_PrintHeuristicallyTypeGuessedArgs(t_atom *data_at, int *data_atc, void *v, int n, int skipComma);
-static char *unpackOSC_DataAfterAlignedString(char *string, char *boundary);
-static int unpackOSC_IsNiceString(char *string, char *boundary);
+static int unpackOSC_path(t_unpackOSC *x, t_atom *data_at, char *path);
+static void unpackOSC_Smessage(t_unpackOSC *x, t_atom *data_at, int *data_atc, void *v, int n);
+static void unpackOSC_PrintTypeTaggedArgs(t_unpackOSC *x, t_atom *data_at, int *data_atc, void *v, int n);
+static void unpackOSC_PrintHeuristicallyTypeGuessedArgs(t_unpackOSC *x, t_atom *data_at, int *data_atc, void *v, int n, int skipComma);
+static char *unpackOSC_DataAfterAlignedString(t_unpackOSC *x, char *string, char *boundary);
+static int unpackOSC_IsNiceString(t_unpackOSC *x, char *string, char *boundary);
 
 static void *unpackOSC_new(void)
 {
@@ -157,12 +157,12 @@ static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
     x->x_reentry_count++;
     if ((argc%4) != 0)
     {
-        post("unpackOSC: Packet size (%d) not a multiple of 4 bytes: dropping packet", argc);
+        pd_error(x, "unpackOSC: Packet size (%d) not a multiple of 4 bytes: dropping packet", argc);
         goto unpackOSC_list_out;
     }
     if(argc > MAX_MESG)
     {
-        post("unpackOSC: Packet size (%d) greater than max (%d). Change MAX_MESG and recompile if you want more.", argc, MAX_MESG);
+        pd_error(x, "unpackOSC: Packet size (%d) greater than max (%d). Change MAX_MESG and recompile if you want more.", argc, MAX_MESG);
         goto unpackOSC_list_out;
     }
     /* copy the list to a byte buffer, checking for bytes only */
@@ -180,13 +180,14 @@ static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
             }
             else
             {
-                post("unpackOSC: Data out of range (%d), dropping packet", argv[i].a_w.w_float);
+                pd_error(x, "unpackOSC: Data out of range (%d), dropping packet",
+                         (int)argv[i].a_w.w_float);
                 goto unpackOSC_list_out;
             }
         }
         else
         {
-            post("unpackOSC: Data not float, dropping packet");
+            pd_error(x, "unpackOSC: Data not float, dropping packet");
             goto unpackOSC_list_out;
         }
     }
@@ -202,7 +203,7 @@ static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
 
         if (argc < 16)
         {
-            post("unpackOSC: Bundle message too small (%d bytes) for time tag", argc);
+            pd_error(x, "unpackOSC: Bundle message too small (%d bytes) for time tag", argc);
             goto unpackOSC_list_out;
         }
 
@@ -240,12 +241,12 @@ static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
             size = ntohl(*((int *) (buf + i)));
             if ((size % 4) != 0)
             {
-                post("unpackOSC: Bad size count %d in bundle (not a multiple of 4)", size);
+                pd_error(x, "unpackOSC: Bad size count %d in bundle (not a multiple of 4)", size);
                 goto unpackOSC_list_out;
             }
             if ((size + i + 4) > argc)
             {
-                post("unpackOSC: Bad size count %d in bundle (only %d bytes left in entire bundle)",
+                pd_error(x, "unpackOSC: Bad size count %d in bundle (only %d bytes left in entire bundle)",
                     size, argc-i-4);
                 goto unpackOSC_list_out;
             }
@@ -257,7 +258,7 @@ static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
 #endif
             if (x->x_recursion_level > MAX_BUNDLE_NESTING)
             {
-                post("unpackOSC: bundle depth %d exceeded", MAX_BUNDLE_NESTING);
+                pd_error(x, "unpackOSC: bundle depth %d exceeded", MAX_BUNDLE_NESTING);
                 x->x_abort_bundle = 1;/* we need to back out of the recursive stack*/
                 goto unpackOSC_list_out;
             }
@@ -271,7 +272,7 @@ static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
 
         if (i != argc)
         {
-            post("unpackOSC: This can't happen");
+            pd_error(x, "unpackOSC: This can't happen");
         }
 
         x->x_bundle_flag = 0; /* end of bundle */
@@ -292,21 +293,21 @@ static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
 #ifdef DEBUG
         printf("unpackOSC: message name string: %s length %d\n", messageName, raw_c);
 #endif
-        args = unpackOSC_DataAfterAlignedString(messageName, buf+raw_c);
+        args = unpackOSC_DataAfterAlignedString(x, messageName, buf+raw_c);
         if (args == 0)
         {
-            post("unpackOSC: Bad message name string: Dropping entire message.");
+            pd_error(x, "unpackOSC: Bad message name string: Dropping entire message.");
             goto unpackOSC_list_out;
         }
         messageLen = args-messageName;
         /* put the OSC path into a single symbol */
-        data_atc = unpackOSC_path(data_at, messageName); /* returns 1 if path OK, else 0  */
+        data_atc = unpackOSC_path(x, data_at, messageName); /* returns 1 if path OK, else 0  */
         if (data_atc == 1)
         {
 #ifdef DEBUG
             printf("unpackOSC_list calling unpackOSC_Smessage: message length %d\n", raw_c-messageLen);
 #endif
-            unpackOSC_Smessage(data_at, &data_atc, (void *)args, raw_c-messageLen);
+            unpackOSC_Smessage(x, data_at, &data_atc, (void *)args, raw_c-messageLen);
             if (0 == x->x_bundle_flag)
                 outlet_float(x->x_delay_out, 0); /* no delay for message not in a bundle */
         }
@@ -320,7 +321,7 @@ unpackOSC_list_out:
     x->x_reentry_count--;
 }
 
-static int unpackOSC_path(t_atom *data_at, char *path)
+static int unpackOSC_path(t_unpackOSC *x, t_atom *data_at, char *path)
 {
     int i;
 
@@ -328,7 +329,7 @@ static int unpackOSC_path(t_atom *data_at, char *path)
     {
         for (i = 0; i < 16; ++i) if ('\0' == path[i]) break;
         path[i] = '\0';
-        post("unpackOSC: Path doesn't begin with \"/\", dropping message");
+        pd_error(x, "unpackOSC: Path doesn't begin with \"/\", dropping message");
         return 0;
     }
     for (i = 1; i < MAX_MESG; ++i)
@@ -339,12 +340,12 @@ static int unpackOSC_path(t_atom *data_at, char *path)
             return 1;
         }
     }
-    post("unpackOSC: Path too long, dropping message");
+    pd_error(x, "unpackOSC: Path too long, dropping message");
     return 0;
 }
 #define SMALLEST_POSITIVE_FLOAT 0.000001f
 
-static void unpackOSC_Smessage(t_atom *data_at, int *data_atc, void *v, int n)
+static void unpackOSC_Smessage(t_unpackOSC *x, t_atom *data_at, int *data_atc, void *v, int n)
 {
     char   *chars = v;
 
@@ -358,7 +359,7 @@ static void unpackOSC_Smessage(t_atom *data_at, int *data_atc, void *v, int n)
                 printf("unpackOSC_Smessage calling unpackOSC_PrintTypeTaggedArgs: message length %d\n", n);
 #endif
                 /* This message begins with a type-tag string */
-                unpackOSC_PrintTypeTaggedArgs(data_at, data_atc, v, n);
+                unpackOSC_PrintTypeTaggedArgs(x, data_at, data_atc, v, n);
             }
             else
             {
@@ -366,7 +367,7 @@ static void unpackOSC_Smessage(t_atom *data_at, int *data_atc, void *v, int n)
                 printf("unpackOSC_Smessage calling unpackOSC_PrintHeuristicallyTypeGuessedArgs: message length %d, skipComma 1\n", n);
 #endif
                 /* Double comma means an escaped real comma, not a type string */
-                unpackOSC_PrintHeuristicallyTypeGuessedArgs(data_at, data_atc, v, n, 1);
+                unpackOSC_PrintHeuristicallyTypeGuessedArgs(x, data_at, data_atc, v, n, 1);
             }
         }
         else
@@ -374,12 +375,12 @@ static void unpackOSC_Smessage(t_atom *data_at, int *data_atc, void *v, int n)
 #ifdef DEBUG
             printf("unpackOSC_Smessage calling unpackOSC_PrintHeuristicallyTypeGuessedArgs: message length %d, skipComma 0\n", n);
 #endif
-            unpackOSC_PrintHeuristicallyTypeGuessedArgs(data_at, data_atc, v, n, 0);
+            unpackOSC_PrintHeuristicallyTypeGuessedArgs(x, data_at, data_atc, v, n, 0);
         }
     }
 }
 
-static void unpackOSC_PrintTypeTaggedArgs(t_atom *data_at, int *data_atc, void *v, int n)
+static void unpackOSC_PrintTypeTaggedArgs(t_unpackOSC *x, t_atom *data_at, int *data_atc, void *v, int n)
 {
     char    *typeTags, *thisType, *p;
     int     myargc = *data_atc;
@@ -387,21 +388,21 @@ static void unpackOSC_PrintTypeTaggedArgs(t_atom *data_at, int *data_atc, void *
 
     typeTags = v;
 
-    if (!unpackOSC_IsNiceString(typeTags, typeTags+n))
+    if (!unpackOSC_IsNiceString(x, typeTags, typeTags+n))
     {
 #ifdef DEBUG
             printf("unpackOSC_PrintTypeTaggedArgs not nice string\n");
 #endif
         /* No null-termination, so maybe it wasn't a type tag
         string after all */
-        unpackOSC_PrintHeuristicallyTypeGuessedArgs(data_at, data_atc, v, n, 0);
+        unpackOSC_PrintHeuristicallyTypeGuessedArgs(x, data_at, data_atc, v, n, 0);
         return;
     }
 
 #ifdef DEBUG
     printf("unpackOSC_PrintTypeTaggedArgs calling unpackOSC_DataAfterAlignedString %p to  %p\n", typeTags, typeTags+n);
 #endif
-    p = unpackOSC_DataAfterAlignedString(typeTags, typeTags+n);
+    p = unpackOSC_DataAfterAlignedString(x, typeTags, typeTags+n);
 #ifdef DEBUG
     printf("unpackOSC_PrintTypeTaggedArgs p is %p: ", p);
 #endif
@@ -460,20 +461,20 @@ static void unpackOSC_PrintTypeTaggedArgs(t_atom *data_at, int *data_atc, void *
 #ifdef DEBUG
                 printf("[A 64-bit int]\n");
 #endif
-                post("unpackOSC: PrintTypeTaggedArgs: [A 64-bit int] not implemented");
+                pd_error(x, "unpackOSC: PrintTypeTaggedArgs: [A 64-bit int] not implemented");
                 p += 8;
                 break;
             case 'd':
 #ifdef DEBUG
                 printf("[A 64-bit float]\n");
 #endif
-                post("unpackOSC: PrintTypeTaggedArgs: [A 64-bit float] not implemented");
+                pd_error(x, "unpackOSC: PrintTypeTaggedArgs: [A 64-bit float] not implemented");
                 p += 8;
                 break;
             case 's': case 'S':
-                if (!unpackOSC_IsNiceString(p, typeTags+n))
+                if (!unpackOSC_IsNiceString(x, p, typeTags+n))
                 {
-                    post("unpackOSC: PrintTypeTaggedArgs: Type tag said this arg is a string but it's not!\n");
+                    pd_error(x, "unpackOSC: PrintTypeTaggedArgs: Type tag said this arg is a string but it's not!\n");
                     return;
                 }
                 else
@@ -483,7 +484,7 @@ static void unpackOSC_PrintTypeTaggedArgs(t_atom *data_at, int *data_atc, void *
 #endif
                     SETSYMBOL(mya+myargc,gensym(p));
                     myargc++;
-                    p = unpackOSC_DataAfterAlignedString(p, typeTags+n);
+                    p = unpackOSC_DataAfterAlignedString(x, p, typeTags+n);
 
                 }
                 break;
@@ -519,14 +520,14 @@ static void unpackOSC_PrintTypeTaggedArgs(t_atom *data_at, int *data_atc, void *
 #ifdef DEBUG
                 printf("unpackOSC_PrintTypeTaggedArgs unknown typetag %c (%0X)\n", *thisType, *thisType);
 #endif
-                post("unpackOSC: PrintTypeTaggedArgs: [Unrecognized type tag %c]", *thisType);
+                pd_error(x, "unpackOSC: PrintTypeTaggedArgs: [Unrecognized type tag %c]", *thisType);
                 return;
          }
     }
     *data_atc = myargc;
 }
 
-static void unpackOSC_PrintHeuristicallyTypeGuessedArgs(t_atom *data_at, int *data_atc, void *v, int n, int skipComma)
+static void unpackOSC_PrintHeuristicallyTypeGuessedArgs(t_unpackOSC *x, t_atom *data_at, int *data_atc, void *v, int n, int skipComma)
 {
     int         i;
     int         *ints;
@@ -564,9 +565,9 @@ static void unpackOSC_PrintHeuristicallyTypeGuessedArgs(t_atom *data_at, int *da
             myargc++;
             i++;
         }
-        else if (unpackOSC_IsNiceString(string, chars+n))
+        else if (unpackOSC_IsNiceString(x, string, chars+n))
         {
-            nextString = unpackOSC_DataAfterAlignedString(string, chars+n);
+            nextString = unpackOSC_DataAfterAlignedString(x, string, chars+n);
 #ifdef DEBUG
             printf("\"%s\" ", (i == 0 && skipComma) ? string +1 : string);
 #endif
@@ -586,7 +587,7 @@ static void unpackOSC_PrintHeuristicallyTypeGuessedArgs(t_atom *data_at, int *da
 
 #define STRING_ALIGN_PAD 4
 
-static char *unpackOSC_DataAfterAlignedString(char *string, char *boundary)
+static char *unpackOSC_DataAfterAlignedString(t_unpackOSC *x, char *string, char *boundary)
 {
     /* The argument is a block of data beginning with a string.  The
         string has (presumably) been padded with extra null characters
@@ -605,7 +606,7 @@ static char *unpackOSC_DataAfterAlignedString(char *string, char *boundary)
 #endif
     if ((boundary - string) %4 != 0)
     {
-        post("unpackOSC: DataAfterAlignedString: bad boundary");
+        pd_error(x, "unpackOSC: DataAfterAlignedString: bad boundary");
         return 0;
     }
 
@@ -616,7 +617,7 @@ static char *unpackOSC_DataAfterAlignedString(char *string, char *boundary)
 #endif
         if (string + i >= boundary)
         {
-            post("unpackOSC: DataAfterAlignedString: Unreasonably long string");
+            pd_error(x, "unpackOSC: DataAfterAlignedString: Unreasonably long string");
             return 0;
         }
     }
@@ -631,12 +632,12 @@ static char *unpackOSC_DataAfterAlignedString(char *string, char *boundary)
     {
         if (string + i >= boundary)
         {
-            post("unpackOSC: DataAfterAlignedString: Unreasonably long string");
+            pd_error(x, "unpackOSC: DataAfterAlignedString: Unreasonably long string");
             return 0;
         }
         if (string[i] != '\0')
         {
-            post("unpackOSC: DataAfterAlignedString: Incorrectly padded string");
+            pd_error(x, "unpackOSC: DataAfterAlignedString: Incorrectly padded string");
             return 0;
         }
     }
@@ -647,7 +648,7 @@ static char *unpackOSC_DataAfterAlignedString(char *string, char *boundary)
     return string+i;
 }
 
-static int unpackOSC_IsNiceString(char *string, char *boundary)
+static int unpackOSC_IsNiceString(t_unpackOSC *x, char *string, char *boundary)
 {
     /* Arguments same as DataAfterAlignedString().  Is the given "string"
        really an OSC-string?  I.e., is it
@@ -660,7 +661,7 @@ static int unpackOSC_IsNiceString(char *string, char *boundary)
 
     if ((boundary - string) %4 != 0)
     {
-        post("unpackOSC: IsNiceString: bad boundary\n");
+        pd_error(x, "unpackOSC: IsNiceString: bad boundary\n");
         return 0;
     }
 
