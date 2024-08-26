@@ -144,10 +144,10 @@ typedef struct
 #define NEED_COUNT 2 /* Just opened a bundle; must write message name or */
                      /* open another bundle */
 #define GET_ARGS 3 /* Getting arguments to a message.  If we see a message */
-                     /*	name or a bundle open/close then the current message */
-                     /*	will end. */
+                     /* name or a bundle open/close then the current message */
+                     /* will end. */
 #define DONE 4 /* All open bundles have been closed, so can't write */
-                     /*	anything else */
+                     /* anything else */
 
 
 static int OSC_strlen(const char *s);
@@ -393,7 +393,7 @@ static void packOSC_setTimeTagOffset(t_packOSC *x, t_floatarg f)
 static void packOSC_sendtyped(t_packOSC *x, t_symbol *s, int argc, t_atom *argv)
 {
     char            messageName[MAXPDSTRING];
-    unsigned int	nTypeTags = 0, typeStrTotalSize = 0;
+    unsigned int    nTypeTags = 0, typeStrTotalSize = 0;
     unsigned int    argsSize = sizeof(typedArg)*argc;
     char*           typeStr = NULL; /* might not be used */
     typedArg*       args = (typedArg*)getbytes(argsSize);
@@ -1043,7 +1043,7 @@ static void packOSC_sendbuffer(t_packOSC *x)
     -------------
 
     raf@interaccess.com:
-    rev. for Win32 build  (verified under Win-2ooo)		11-April-2002
+    rev. for Win32 build  (verified under Win-2ooo) 11-April-2002
 
     -- changed licence part (20040820) jdl
     -- Version 2.4 changes not in here (20040820) jdl
@@ -1373,7 +1373,7 @@ static int OSC_writeIntArg(OSCbuf *buf, uint32_t arg)
 
 static int OSC_writeBlobArg(OSCbuf *buf, typedArg *arg, size_t nArgs)
 {
-    size_t	i;
+    size_t i;
     unsigned char b;
 
 /* pack all the args as single bytes following a 4-byte length */

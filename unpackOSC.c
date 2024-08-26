@@ -59,7 +59,7 @@ The OSC webpage is http://cnmat.cnmat.berkeley.edu/OpenSoundControl
     -------------
     -- added pd functions
     -- socket is made differently than original via pd mechanisms
-    -- tweaks for Win32    www.zeggz.com/raf	13-April-2002
+    -- tweaks for Win32    www.zeggz.com/raf 13-April-2002
     -- the OSX changes from cnmat didnt make it here yet but this compiles
         on OSX anyway.
 
