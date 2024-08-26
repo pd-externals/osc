@@ -27,9 +27,6 @@
 
 #include <math.h>
 #include <stdint.h>
-#ifdef HAVE_S_STUFF_H
-#include "s_stuff.h"
-#endif
 typedef struct _OSCTimeTag
 {
     uint32_t seconds;

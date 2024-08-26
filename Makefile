@@ -25,8 +25,6 @@ define forWindows
   ldlibs = -lwsock32
 endef
 
-cflags = -DHAVE_S_STUFF_H
-
 # This Makefile is based on the Makefile from pd-lib-builder written by
 # Katja Vetter. You can get it from:
 # https://github.com/pure-data/pd-lib-builder

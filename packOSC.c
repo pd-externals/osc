@@ -39,13 +39,6 @@ The OSC webpage is http://cnmat.cnmat.berkeley.edu/OpenSoundControl
 #include "packingOSC.h"
 #include "OSC_timeTag.h"
 
-#if HAVE_S_STUFF_H
-# include "s_stuff.h"
-# define packOSC_verbose sys_verbose
-#else
-static int packOSC_verbose = 0;
-#endif
-
 /* This is from OSC-client.h :*/
 /*
 
