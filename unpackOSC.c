@@ -102,8 +102,8 @@ static int unpackOSC_path(t_unpackOSC *x, t_atom *data_at, char *path);
 static void unpackOSC_Smessage(t_unpackOSC *x, t_atom *data_at, int *data_atc, void *v, int n);
 static void unpackOSC_PrintTypeTaggedArgs(t_unpackOSC *x, t_atom *data_at, int *data_atc, void *v, int n);
 static void unpackOSC_PrintHeuristicallyTypeGuessedArgs(t_unpackOSC *x, t_atom *data_at, int *data_atc, void *v, int n, int skipComma);
-static char *unpackOSC_DataAfterAlignedString(t_unpackOSC *x, char *string, char *boundary);
-static int unpackOSC_IsNiceString(t_unpackOSC *x, char *string, char *boundary);
+static const char *unpackOSC_DataAfterAlignedString(t_unpackOSC *x, const char *string, const char *boundary);
+static int unpackOSC_IsNiceString(t_unpackOSC *x, const char *string, const char *boundary);
 
 static void *unpackOSC_new(void)
 {
@@ -533,7 +533,7 @@ static void unpackOSC_PrintHeuristicallyTypeGuessedArgs(t_unpackOSC *x, t_atom *
 
 #define STRING_ALIGN_PAD 4
 
-static char *unpackOSC_DataAfterAlignedString(t_unpackOSC *x, char *string, char *boundary)
+static const char *unpackOSC_DataAfterAlignedString(t_unpackOSC *x, const char *string, const char *boundary)
 {
     /* The argument is a block of data beginning with a string.  The
         string has (presumably) been padded with extra null characters
@@ -586,7 +586,7 @@ static char *unpackOSC_DataAfterAlignedString(t_unpackOSC *x, char *string, char
     return string+i;
 }
 
-static int unpackOSC_IsNiceString(t_unpackOSC *x, char *string, char *boundary)
+static int unpackOSC_IsNiceString(t_unpackOSC *x, const char *string, const char *boundary)
 {
     /* Arguments same as DataAfterAlignedString().  Is the given "string"
        really an OSC-string?  I.e., is it
