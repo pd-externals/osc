@@ -148,13 +148,13 @@ static void unpackOSC_usepdtime(t_unpackOSC *x, t_floatarg f)
 /* unpackOSC_list expects an OSC packet in the form of a list of floats on [0..255] */
 static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
 {
-    int             size, messageLen, i, j;
-    char            *messageName, *args, *buf;
-    OSCTimeTag      tt;
-    t_atom          data_at[MAX_MESG] ={{0}};/* symbols making up the path + payload */
-    int             data_atc = 0;/* number of symbols to be output */
-    char            raw[MAX_MESG];/* bytes making up the entire OSC message */
-    int             raw_c;/* number of bytes in OSC message */
+    int size, messageLen, i, j;
+    char *messageName, *args, *buf;
+    OSCTimeTag tt;
+    t_atom data_at[MAX_MESG] ={{0}};/* symbols making up the path + payload */
+    int data_atc = 0;/* number of symbols to be output */
+    char raw[MAX_MESG];/* bytes making up the entire OSC message */
+    int raw_c;/* number of bytes in OSC message */
 
     debug(">>> unpackOSC_list: %d bytes, abort=%d, reentry_count %d recursion_level %d\n",
         argc, x->x_abort_bundle, x->x_reentry_count, x->x_recursion_level);
@@ -215,7 +215,8 @@ static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
         /* Print the time tag */
         debug("unpackOSC bundle timetag: [ %x.%0x\n", ntohl(*((uint32_t *)(buf+8))),
             ntohl(*((uint32_t *)(buf+12))));
-/* convert the timetag into a millisecond delay from now */
+
+        /* convert the timetag into a millisecond delay from now */
         tt.seconds = ntohl(*((uint32_t *)(buf+8)));
         tt.fraction = ntohl(*((uint32_t *)(buf+12)));
         /* pd can use a delay in milliseconds */
@@ -275,14 +276,10 @@ static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
         x->x_bundle_flag = 0; /* end of bundle */
         debug("unpackOSC: bundle end ] depth is %d\n", x->x_recursion_level);
 
-    }
-    else if ((argc == 24) && (strcmp(buf, "#time") == 0))
-    {
+    } else if ((argc == 24) && (strcmp(buf, "#time") == 0)) {
         post("unpackOSC: Time message: %s\n :).\n", buf);
         goto unpackOSC_list_out;
-    }
-    else
-    { /* This is not a bundle message or a time message */
+    } else { /* This is not a bundle message or a time message */
 
         messageName = buf;
         debug("unpackOSC: message name string: %s length %d\n", messageName, raw_c);
@@ -338,7 +335,7 @@ static int unpackOSC_path(t_unpackOSC *x, t_atom *data_at, char *path)
 
 static void unpackOSC_Smessage(t_unpackOSC *x, t_atom *data_at, int *data_atc, void *v, int n)
 {
-    char   *chars = v;
+    char *chars = v;
 
     if (n != 0)
     {
@@ -367,9 +364,9 @@ static void unpackOSC_Smessage(t_unpackOSC *x, t_atom *data_at, int *data_atc, v
 
 static void unpackOSC_PrintTypeTaggedArgs(t_unpackOSC *x, t_atom *data_at, int *data_atc, void *v, int n)
 {
-    char    *typeTags, *thisType, *p;
-    int     myargc = *data_atc;
-    t_atom  *mya = data_at;
+    const char *typeTags, *thisType, *p;
+    int myargc = *data_atc;
+    t_atom *mya = data_at;
 
     typeTags = v;
 
@@ -484,12 +481,12 @@ static void unpackOSC_PrintTypeTaggedArgs(t_unpackOSC *x, t_atom *data_at, int *
 
 static void unpackOSC_PrintHeuristicallyTypeGuessedArgs(t_unpackOSC *x, t_atom *data_at, int *data_atc, void *v, int n, int skipComma)
 {
-    int         i;
-    int         *ints;
-    intfloat32  thisif;
-    char        *chars, *string, *nextString;
-    int         myargc = *data_atc;
-    t_atom*     mya = data_at;
+    int i;
+    int *ints;
+    intfloat32 thisif;
+    const char *chars, *string, *nextString;
+    int myargc = *data_atc;
+    t_atom* mya = data_at;
 
     /* Go through the arguments 32 bits at a time */
     ints = v;
@@ -569,7 +566,7 @@ static char *unpackOSC_DataAfterAlignedString(t_unpackOSC *x, char *string, char
 
     /* Now string[i] is the first null character */
     debug("\nunpackOSC_DataAfterAlignedString first null character at %p\n",  &string[i]);
-     i++;
+    i++;
 
     for (; (i % STRING_ALIGN_PAD) != 0; i++)
     {
