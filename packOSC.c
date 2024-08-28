@@ -386,7 +386,7 @@ static void packOSC_sendtyped(t_packOSC *x, t_symbol *s, int argc, t_atom *argv)
     char            c;
     (void)s;
 
-    debug("*** packOSC_sendtyped bundle %d reentry %d\n", x->x_bundle, x->x_reentry_count);
+    debugprint("*** packOSC_sendtyped bundle %d reentry %d\n", x->x_bundle, x->x_reentry_count);
     x->x_reentry_count++;
     if (args == NULL)
     {
@@ -419,11 +419,11 @@ static void packOSC_sendtyped(t_packOSC *x, t_symbol *s, int argc, t_atom *argv)
         }
         typeStr[0] = ',';
         atom_string(&argv[1], &typeStr[1], typeStrTotalSize);
-        debug("packOSC_sendtyped typeStr: %s, nTypeTags %u\n", typeStr, nTypeTags);
+        debugprint("packOSC_sendtyped typeStr: %s, nTypeTags %u\n", typeStr, nTypeTags);
         nArgs = argc-2;
         for (m = nTagsWithData = blobCount = 0; m < nTypeTags; ++m)
         {
-            debug("packOSC_sendtyped typeStr[%d] %c\n", m+1, typeStr[m+1]);
+            debugprint("packOSC_sendtyped typeStr[%d] %c\n", m+1, typeStr[m+1]);
             if ((c = typeStr[m+1]) == 0) break;
             if (!(c == 'T' || c == 'F' || c == 'N' || c == 'I'))
             {
@@ -460,7 +460,7 @@ static void packOSC_sendtyped(t_packOSC *x, t_symbol *s, int argc, t_atom *argv)
                 /* Pack all the remaining arguments as a blob */
                 for (; typedArgIndex < nArgs; ++typedArgIndex, ++argvIndex)
                 {
-                    debug("packOSC_blob %d:\n", nArgs);
+                    debugprint("packOSC_blob %d:\n", nArgs);
                     args[typedArgIndex] = packOSC_blob(&argv[argvIndex], x);
                     /* Make sure it was blobbable */
                     if (args[typedArgIndex].type != BLOB_osc) goto cleanup;
@@ -492,23 +492,23 @@ static void packOSC_sendtyped(t_packOSC *x, t_symbol *s, int argc, t_atom *argv)
             switch (args[i].type)
             {
                 case INT_osc:
-                    debug("packOSC: cell-cont: %d\n", args[i].datum.i);
+                    debugprint("packOSC: cell-cont: %d\n", args[i].datum.i);
                     break;
                 case FLOAT_osc:
-                    debug("packOSC: cell-cont: %f\n", args[i].datum.f);
+                    debugprint("packOSC: cell-cont: %f\n", args[i].datum.f);
                     break;
                 case STRING_osc:
-                    debug("packOSC: cell-cont: %s\n", args[i].datum.s);
+                    debugprint("packOSC: cell-cont: %s\n", args[i].datum.s);
                     break;
                 case BLOB_osc:
-                    debug("packOSC: blob\n");
+                    debugprint("packOSC: blob\n");
                     break;
                 case NOTYPE_osc:
-                    debug("packOSC: unknown type\n");
+                    debugprint("packOSC: unknown type\n");
                     break;
 
             }
-            debug("packOSC:   type-id: %d\n", args[i].type);
+            debugprint("packOSC:   type-id: %d\n", args[i].type);
 #endif
         }
         if(packOSC_writemessage(x, x->x_oscbuf, messageName, i, args))
@@ -610,7 +610,7 @@ static typedArg packOSC_parseatom(t_atom *a, t_packOSC *x)
     char     buf[MAXPDSTRING];
 
     atom_string(a, buf, MAXPDSTRING);
-    debug("packOSC: atom type %d (%s)\n", a->a_type, buf);
+    debugprint("packOSC: atom type %d (%s)\n", a->a_type, buf);
     /* It might be an int, a float, or a string */
     switch (a->a_type)
     {
@@ -685,7 +685,7 @@ static typedArg packOSC_packMIDI(t_atom *a, t_packOSC *x)
     do {
       char buf[MAXPDSTRING];
       atom_string(a, buf, MAXPDSTRING);
-      debug("packOSC: atom type %d (%s)\n", a->a_type, buf);
+      debugprint("packOSC: atom type %d (%s)\n", a->a_type, buf);
     } while (0);
 #endif
     if ((a->a_type != A_FLOAT))
@@ -696,7 +696,7 @@ static typedArg packOSC_packMIDI(t_atom *a, t_packOSC *x)
       return returnVal;
     }
     m[i] = atom_getint(a);
-    debug("packOSC_packMIDI: float to integer %d\n", m[i]);
+    debugprint("packOSC_packMIDI: float to integer %d\n", m[i]);
     if ((i < 2) && (m[i] != (m[i] & 0x0FF)))
     {
       pd_error(x, "packOSC: MIDI parameters must be less than 256");
@@ -728,7 +728,7 @@ static typedArg packOSC_forceatom(t_atom *a, char ctype, t_packOSC *x)
 #ifdef DEBUG
     do {
       atom_string(a, buf, MAXPDSTRING);
-      debug("packOSC: atom type %d (%s)\n", a->a_type, buf);
+      debugprint("packOSC: atom type %d (%s)\n", a->a_type, buf);
     } while(0);
 #endif
     /* the atom might be a float, or a symbol */
@@ -740,19 +740,19 @@ static typedArg packOSC_forceatom(t_atom *a, char ctype, t_packOSC *x)
                 case 'i':
                     returnVal.type = INT_osc;
                     returnVal.datum.i = atom_getint(a);
-                    debug("packOSC_forceatom: float to integer %d\n", returnVal.datum.i);
+                    debugprint("packOSC_forceatom: float to integer %d\n", returnVal.datum.i);
                     break;
                 case 'f':
                     returnVal.type = FLOAT_osc;
                     returnVal.datum.f = atom_getfloat(a);
-                    debug("packOSC_forceatom: float to float %f\n", returnVal.datum.f);
+                    debugprint("packOSC_forceatom: float to float %f\n", returnVal.datum.f);
                     break;
                 case 's':
                     f = atom_getfloat(a);
                     sprintf(buf, "%f", f);
                     returnVal.type = STRING_osc;
                     returnVal.datum.s = buf;
-                    debug("packOSC_forceatom: float to string %s\n", returnVal.datum.s);
+                    debugprint("packOSC_forceatom: float to string %s\n", returnVal.datum.s);
                     break;
                 default:
                     pd_error(x, "packOSC: unknown OSC type %c", ctype);
@@ -769,18 +769,18 @@ static typedArg packOSC_forceatom(t_atom *a, char ctype, t_packOSC *x)
                     i = atoi(s.s_name);
                     returnVal.type = INT_osc;
                     returnVal.datum.i = i;
-                    debug("packOSC_forceatom: symbol to integer %d\n", returnVal.datum.i);
+                    debugprint("packOSC_forceatom: symbol to integer %d\n", returnVal.datum.i);
                     break;
                 case 'f':
                     f = atof(s.s_name);
                     returnVal.type = FLOAT_osc;
                     returnVal.datum.f = f;
-                    debug("packOSC_forceatom: symbol to float %f\n", returnVal.datum.f);
+                    debugprint("packOSC_forceatom: symbol to float %f\n", returnVal.datum.f);
                     break;
                 case 's':
                     returnVal.type = STRING_osc;
                     returnVal.datum.s = s.s_name;
-                    debug("packOSC_forceatom: symbol to string %s\n", returnVal.datum.s);
+                    debugprint("packOSC_forceatom: symbol to string %s\n", returnVal.datum.s);
                     break;
                 default:
                     pd_error(x, "packOSC: unknown OSC type %c", ctype);
@@ -804,7 +804,7 @@ static int packOSC_writetypedmessage
 {
     int i, j, returnVal;
 
-    debug("packOSC_writetypedmessage: messageName %p (%s) typeStr %p (%s)\n",
+    debugprint("packOSC_writetypedmessage: messageName %p (%s) typeStr %p (%s)\n",
         messageName, messageName, typeStr, typeStr);
     returnVal = OSC_writeAddressAndTypes(x, buf, messageName, typeStr);
 
@@ -817,7 +817,7 @@ static int packOSC_writetypedmessage
     {
         while (typeStr[i+1] == 'T' || typeStr[i+1] == 'F' || typeStr[i+1] == 'I' || typeStr[i+1] == 'N')
         {
-            debug("packOSC_writetypedmessage: NULL [%c]\n", typeStr[i+1]);
+            debugprint("packOSC_writetypedmessage: NULL [%c]\n", typeStr[i+1]);
             returnVal = OSC_writeNullArg(x, buf, typeStr[i+1]);
             ++i;
         }
@@ -826,20 +826,20 @@ static int packOSC_writetypedmessage
             switch (args[j].type)
             {
                 case INT_osc:
-                    debug("packOSC_writetypedmessage: int [%d]\n", args[j].datum.i);
+                    debugprint("packOSC_writetypedmessage: int [%d]\n", args[j].datum.i);
                     returnVal = OSC_writeIntArg(x, buf, args[j].datum.i);
                     break;
                 case FLOAT_osc:
-                    debug("packOSC_writetypedmessage: float [%f]\n", args[j].datum.f);
+                    debugprint("packOSC_writetypedmessage: float [%f]\n", args[j].datum.f);
                     returnVal = OSC_writeFloatArg(x, buf, args[j].datum.f);
                     break;
                 case STRING_osc:
-                    debug("packOSC_writetypedmessage: string [%s]\n", args[j].datum.s);
+                    debugprint("packOSC_writetypedmessage: string [%s]\n", args[j].datum.s);
                     returnVal = OSC_writeStringArg(x, buf, args[j].datum.s);
                     break;
                 case BLOB_osc:
                     /* write all the blob elements at once */
-                    debug("packOSC_writetypedmessage calling OSC_writeBlobArg\n");
+                    debugprint("packOSC_writetypedmessage calling OSC_writeBlobArg\n");
                     return OSC_writeBlobArg(x, buf, &args[j], numArgs-j);
                 default:
 
@@ -853,11 +853,11 @@ static int packOSC_writetypedmessage
 static int packOSC_writemessage(t_packOSC *x, OSCbuf *buf, char *messageName, int numArgs, typedArg *args)
 {
     int j, returnVal = 0, numTags;
-    debug("packOSC_writemessage buf %p bufptr %p messageName %s %d args typetags %d\n", buf, buf->bufptr, messageName, numArgs, x->x_typetags);
+    debugprint("packOSC_writemessage buf %p bufptr %p messageName %s %d args typetags %d\n", buf, buf->bufptr, messageName, numArgs, x->x_typetags);
 
     if (!x->x_typetags)
     {
-        debug("packOSC_writemessage calling OSC_writeAddress with x->x_typetags %d\n", x->x_typetags);
+        debugprint("packOSC_writemessage calling OSC_writeAddress with x->x_typetags %d\n", x->x_typetags);
         returnVal = OSC_writeAddress(x, buf, messageName);
         if (returnVal)
         {
@@ -898,7 +898,7 @@ static int packOSC_writemessage(t_packOSC *x, OSCbuf *buf, char *messageName, in
             }
         }
         typeTags[j+1] = '\0';
-        debug("packOSC_writemessage calling OSC_writeAddressAndTypes with x->x_typetags %d typeTags %p (%s)\n", x->x_typetags, typeTags, typeTags);
+        debugprint("packOSC_writemessage calling OSC_writeAddressAndTypes with x->x_typetags %d typeTags %p (%s)\n", x->x_typetags, typeTags, typeTags);
         returnVal = OSC_writeAddressAndTypes(x, buf, messageName, typeTags);
         if (returnVal)
         {
@@ -920,7 +920,7 @@ static int packOSC_writemessage(t_packOSC *x, OSCbuf *buf, char *messageName, in
                 returnVal = OSC_writeStringArg(x, buf, args[j].datum.s);
                 break;
             case BLOB_osc:
-                debug("packOSC_writemessage calling OSC_writeBlobArg\n");
+                debugprint("packOSC_writemessage calling OSC_writeBlobArg\n");
                 return OSC_writeBlobArg(x, buf, &args[j], numArgs-j); /* All the remaining args are blob */
             default:
                 break; /* just skip bad types (which we won't get anyway unless this code is buggy) */
@@ -946,7 +946,7 @@ static void packOSC_sendbuffer(t_packOSC *x)
         return;
     }
 
-    debug("packOSC_sendbuffer: Sending buffer...\n");
+    debugprint("packOSC_sendbuffer: Sending buffer...\n");
     if (OSC_isBufferEmpty(x->x_oscbuf))
     {
         pd_error(x, "packOSC_sendbuffer() called but buffer empty");
@@ -959,7 +959,7 @@ static void packOSC_sendbuffer(t_packOSC *x)
     }
     length = OSC_packetSize(x->x_oscbuf);
     buf = (unsigned char *)OSC_getPacket(x->x_oscbuf);
-    debug("packOSC_sendbuffer: length: %u\n", length);
+    debugprint("packOSC_sendbuffer: length: %u\n", length);
 
     /* convert the bytes in the buffer to floats in a list */
     for (i = 0; i < length; ++i) SETFLOAT(&atombuffer[i], buf[i]);
@@ -1161,7 +1161,7 @@ static int OSC_closeBundle(void *x, OSCbuf *buf)
 static int OSC_writeAddress(void *x, OSCbuf *buf, char *name)
 {
     uint32_t paddedLength;
-    debug("-->OSC_writeAddress buf %p bufptr %p name %s\n", buf, buf->bufptr, name);
+    debugprint("-->OSC_writeAddress buf %p bufptr %p name %s\n", buf, buf->bufptr, name);
     if (buf->state == ONE_MSG_ARGS)
     {
         pd_error(x, "packOSC: This packet is not a bundle, so you can't write another address");
@@ -1177,7 +1177,7 @@ static int OSC_writeAddress(void *x, OSCbuf *buf, char *name)
     if (CheckTypeTag(x, buf, '\0')) return 9;
 
     paddedLength = OSC_effectiveStringLength(name);
-    debug("OSC_writeAddress paddedLength %d\n", paddedLength);
+    debugprint("OSC_writeAddress paddedLength %d\n", paddedLength);
 
     if (buf->state == EMPTY)
     {
@@ -1213,7 +1213,7 @@ static int OSC_writeAddressAndTypes(void *x, OSCbuf *buf, char *name, char *type
     int      result;
     uint32_t paddedLength;
 
-    debug("OSC_writeAddressAndTypes buf %p name %s types %s\n", buf, name, types);
+    debugprint("OSC_writeAddressAndTypes buf %p name %s types %s\n", buf, name, types);
     if (buf == NULL) return 10;
     if (CheckTypeTag(x, buf, '\0')) return 9;
 
@@ -1227,7 +1227,7 @@ static int OSC_writeAddressAndTypes(void *x, OSCbuf *buf, char *name, char *type
 
     buf->typeStringPtr = buf->bufptr + 1; /* skip comma */
     buf->bufptr += OSC_padString(buf->bufptr, types);
-    debug("OSC_writeAddressAndTypes buf->typeStringPtr now %p (%s) buf->bufptr now %p (%s)\n",
+    debugprint("OSC_writeAddressAndTypes buf->typeStringPtr now %p (%s) buf->bufptr now %p (%s)\n",
         buf->typeStringPtr, buf->typeStringPtr, buf->bufptr, buf->bufptr);
 
     buf->gettingFirstUntypedArg = 0;
@@ -1242,9 +1242,9 @@ static int CheckTypeTag(void *x, const OSCbuf *buf, char expectedType)
 
     if (typeStringPtr)
     {
-        debug("CheckTypeTag typeStringPtr %p (%s)\n", typeStringPtr, typeStringPtr);
+        debugprint("CheckTypeTag typeStringPtr %p (%s)\n", typeStringPtr, typeStringPtr);
         c = *typeStringPtr;
-        debug("CheckTypeTag buf %p expectedType %c c is %c\n", buf, expectedType, c);
+        debugprint("CheckTypeTag buf %p expectedType %c c is %c\n", buf, expectedType, c);
         if (c != expectedType)
         {
             if (expectedType == '\0')
@@ -1313,7 +1313,7 @@ static int OSC_writeBlobArg(void *x, OSCbuf *buf, typedArg *arg, size_t nArgs)
     if (CheckTypeTag(x, buf, 'b')) return 9;
 
     *((uint32_t *) buf->bufptr) = htonl(nArgs);
-    debug("OSC_writeBlobArg length : %lu\n", nArgs);
+    debugprint("OSC_writeBlobArg length : %lu\n", nArgs);
     buf->bufptr += 4;
 
     for (i = 0; i < nArgs; i++)
@@ -1324,7 +1324,7 @@ static int OSC_writeBlobArg(void *x, OSCbuf *buf, typedArg *arg, size_t nArgs)
             return 9;
         }
         b = (unsigned char)((arg[i].datum.i)&0x0FF);/* force int to 8-bit byte */
-        debug("OSC_writeBlobArg : %d, %d\n", arg[i].datum.i, b);
+        debugprint("OSC_writeBlobArg : %d, %d\n", arg[i].datum.i, b);
         buf->bufptr[i] = b;
     }
     i = OSC_WriteBlobPadding(buf->bufptr, i);

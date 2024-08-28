@@ -141,8 +141,8 @@ static void unpackOSC_usepdtime(t_unpackOSC *x, t_floatarg f)
 /* unpackOSC_list expects an OSC packet in the form of a list of floats on [0..255] */
 static void unpackOSC_dolist(t_unpackOSC *x, int argc, const char *buf, t_atom out_argv[MAX_MESG])
 {
-    debug(">>> %s(%p, %d, %p)\n", __FUNCTION__, x, argc, buf);
-    debug(">>> unpackOSC_list: %d bytes, abort=%d, reentry_count %d recursion_level %d\n",
+    debugprint(">>> %s(%p, %d, %p)\n", __FUNCTION__, x, argc, buf);
+    debugprint(">>> unpackOSC_list: %d bytes, abort=%d, reentry_count %d recursion_level %d\n",
         argc, x->x_abort_bundle, x->x_reentry_count, x->x_recursion_level);
     if(x->x_abort_bundle) return; /* if backing quietly out of the recursive stack */
     x->x_reentry_count++;
@@ -157,7 +157,7 @@ static void unpackOSC_dolist(t_unpackOSC *x, int argc, const char *buf, t_atom o
         int i = 16; /* Skip "#bundle\0" and time tag */
         OSCTimeTag tt;
         double delta = 0.;
-        debug("unpackOSC: bundle msg:\n");
+        debugprint("unpackOSC: bundle msg:\n");
 
         if (argc < 16)
         {
@@ -168,7 +168,7 @@ static void unpackOSC_dolist(t_unpackOSC *x, int argc, const char *buf, t_atom o
         x->x_bundle_flag = 1;
 
         /* Print the time tag */
-        debug("unpackOSC bundle timetag: [ %x.%0x\n", ntohl(*((uint32_t *)(buf+8))),
+        debugprint("unpackOSC bundle timetag: [ %x.%0x\n", ntohl(*((uint32_t *)(buf+8))),
             ntohl(*((uint32_t *)(buf+12))));
 
         /* convert the timetag into a millisecond delay from now */
@@ -208,14 +208,14 @@ static void unpackOSC_dolist(t_unpackOSC *x, int argc, const char *buf, t_atom o
 
             /* Recursively handle element of bundle */
             x->x_recursion_level++;
-            debug("unpackOSC: bundle depth %d\n", x->x_recursion_level);
+            debugprint("unpackOSC: bundle depth %d\n", x->x_recursion_level);
             if (x->x_recursion_level > MAX_BUNDLE_NESTING)
             {
                 pd_error(x, "unpackOSC: bundle depth %d exceeded", MAX_BUNDLE_NESTING);
                 x->x_abort_bundle = 1;/* we need to back out of the recursive stack*/
                 goto unpackOSC_list_out;
             }
-            debug("unpackOSC: bundle calling unpackOSC_list(x=%p, size=%d, buf[%d]=%p)\n",
+            debugprint("unpackOSC: bundle calling unpackOSC_list(x=%p, size=%d, buf[%d]=%p)\n",
               x, size, i+4, &buf[i+4]);
             unpackOSC_dolist(x, size, &buf[i+4], out_argv);
             i += 4 + size;
@@ -227,7 +227,7 @@ static void unpackOSC_dolist(t_unpackOSC *x, int argc, const char *buf, t_atom o
         }
 
         x->x_bundle_flag = 0; /* end of bundle */
-        debug("unpackOSC: bundle end ] depth is %d\n", x->x_recursion_level);
+        debugprint("unpackOSC: bundle end ] depth is %d\n", x->x_recursion_level);
 
     } else if ((argc == 24) && (strcmp(buf, "#time") == 0)) {
         post("unpackOSC: Time message: %s\n :).\n", buf);
@@ -239,7 +239,7 @@ static void unpackOSC_dolist(t_unpackOSC *x, int argc, const char *buf, t_atom o
         const char*args = unpackOSC_DataAfterAlignedString(x, messageName, buf+argc);
         t_symbol *path;
 
-        debug("unpackOSC: message name string: %s length %d\n", messageName, argc);
+        debugprint("unpackOSC: message name string: %s length %d\n", messageName, argc);
         if (args == 0)
         {
             pd_error(x, "unpackOSC: Bad message name string: Dropping entire message.");
@@ -253,8 +253,8 @@ static void unpackOSC_dolist(t_unpackOSC *x, int argc, const char *buf, t_atom o
             pd_error(x, "unpackOSC: Bad message path: Dropping entire message.");
             goto unpackOSC_list_out;
         }
-        debug("unpackOSC: message '%s', args=%p\n", path?path->s_name:0, args);
-        debug("unpackOSC_list calling unpackOSC_Smessage: message length %d\n", argc-messageLen);
+        debugprint("unpackOSC: message '%s', args=%p\n", path?path->s_name:0, args);
+        debugprint("unpackOSC_list calling unpackOSC_Smessage: message length %d\n", argc-messageLen);
 
         unpackOSC_Smessage(x, out_argv, &out_argc, (void *)args, argc-messageLen);
         if (0 == x->x_bundle_flag)
@@ -273,6 +273,14 @@ static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
     char raw[MAX_MESG];/* bytes making up the entire OSC message */
     int i;
     (void)s;
+    if(!argc) {
+        return;
+    }
+    if ((argc%4) != 0)
+    {
+        pd_error(x, "unpackOSC: Packet size (%d) not a multiple of 4 bytes: dropping packet", argc);
+        return;
+    }
     if(argc>MAX_MESG) {
         pd_error(x, "unpackOSC: Packet size (%d) greater than max (%d). Change MAX_MESG and recompile if you want more.", argc, MAX_MESG);
         return;
@@ -344,20 +352,20 @@ static void unpackOSC_Smessage(t_unpackOSC *x, t_atom *data_at, int *data_atc, v
         {
             if (chars[1] != ',')
             {
-                debug("unpackOSC_Smessage calling unpackOSC_PrintTypeTaggedArgs: message length %d\n", n);
+                debugprint("unpackOSC_Smessage calling unpackOSC_PrintTypeTaggedArgs: message length %d\n", n);
                 /* This message begins with a type-tag string */
                 unpackOSC_PrintTypeTaggedArgs(x, data_at, data_atc, v, n);
             }
             else
             {
-                debug("unpackOSC_Smessage calling unpackOSC_PrintHeuristicallyTypeGuessedArgs: message length %d, skipComma 1\n", n);
+                debugprint("unpackOSC_Smessage calling unpackOSC_PrintHeuristicallyTypeGuessedArgs: message length %d, skipComma 1\n", n);
                 /* Double comma means an escaped real comma, not a type string */
                 unpackOSC_PrintHeuristicallyTypeGuessedArgs(x, data_at, data_atc, v, n, 1);
             }
         }
         else
         {
-            debug("unpackOSC_Smessage calling unpackOSC_PrintHeuristicallyTypeGuessedArgs: message length %d, skipComma 0\n", n);
+            debugprint("unpackOSC_Smessage calling unpackOSC_PrintHeuristicallyTypeGuessedArgs: message length %d, skipComma 0\n", n);
             unpackOSC_PrintHeuristicallyTypeGuessedArgs(x, data_at, data_atc, v, n, 0);
         }
     }
@@ -373,16 +381,16 @@ static void unpackOSC_PrintTypeTaggedArgs(t_unpackOSC *x, t_atom *data_at, int *
 
     if (!unpackOSC_IsNiceString(x, typeTags, typeTags+n))
     {
-        debug("unpackOSC_PrintTypeTaggedArgs not nice string\n");
+        debugprint("unpackOSC_PrintTypeTaggedArgs not nice string\n");
         /* No null-termination, so maybe it wasn't a type tag
         string after all */
         unpackOSC_PrintHeuristicallyTypeGuessedArgs(x, data_at, data_atc, v, n, 0);
         return;
     }
 
-    debug("unpackOSC_PrintTypeTaggedArgs calling unpackOSC_DataAfterAlignedString %p to  %p\n", typeTags, typeTags+n);
+    debugprint("unpackOSC_PrintTypeTaggedArgs calling unpackOSC_DataAfterAlignedString %p to  %p\n", typeTags, typeTags+n);
     p = unpackOSC_DataAfterAlignedString(x, typeTags, typeTags+n);
-    debug("unpackOSC_PrintTypeTaggedArgs p is %p: ", p);
+    debugprint("unpackOSC_PrintTypeTaggedArgs p is %p: ", p);
     if (p == NULL) return; /* malformed message */
     for (thisType = typeTags + 1; *thisType != 0; ++thisType)
     {
@@ -391,7 +399,7 @@ static void unpackOSC_PrintTypeTaggedArgs(t_unpackOSC *x, t_atom *data_at, int *
             case 'b': /* blob: an int32 size count followed by that many 8-bit bytes */
             {
                 int i, blob_bytes = ntohl(*((int *) p));
-                debug("blob: %u bytes\n", blob_bytes);
+                debugprint("blob: %u bytes\n", blob_bytes);
                 p += 4;
                 for (i = 0; i < blob_bytes; ++i, ++p, ++myargc)
                     SETFLOAT(mya+myargc,(*(unsigned char *)p));
@@ -405,13 +413,13 @@ static void unpackOSC_PrintTypeTaggedArgs(t_unpackOSC *x, t_atom *data_at, int *
             case 'm': /* MIDI message is the next four bytes*/
             {
                 int i;
-                debug("MIDI: 0x%08X\n", ntohl(*((int *) p)));
+                debugprint("MIDI: 0x%08X\n", ntohl(*((int *) p)));
                 for (i = 0; i < 4; ++i, ++p, ++myargc)
                     SETFLOAT(mya+myargc, (*(unsigned char *)p));
                 break;
             }
             case 'i': case 'r': case 'c':
-                debug("integer: %d\n", ntohl(*((int *) p)));
+                debugprint("integer: %d\n", ntohl(*((int *) p)));
                 SETFLOAT(mya+myargc,(signed)ntohl(*((int *) p)));
                 myargc++;
                 p += 4;
@@ -420,19 +428,19 @@ static void unpackOSC_PrintTypeTaggedArgs(t_unpackOSC *x, t_atom *data_at, int *
             {
                 intfloat32 thisif;
                 thisif.i = ntohl(*((int *) p));
-                debug("float: %f\n", thisif.f);
+                debugprint("float: %f\n", thisif.f);
                 SETFLOAT(mya+myargc, thisif.f);
                 myargc++;
                 p += 4;
                 break;
             }
             case 'h': case 't':
-                debug("[A 64-bit int]\n");
+                debugprint("[A 64-bit int]\n");
                 pd_error(x, "unpackOSC: PrintTypeTaggedArgs: [A 64-bit int] not implemented");
                 p += 8;
                 break;
             case 'd':
-                debug("[A 64-bit float]\n");
+                debugprint("[A 64-bit float]\n");
                 pd_error(x, "unpackOSC: PrintTypeTaggedArgs: [A 64-bit float] not implemented");
                 p += 8;
                 break;
@@ -444,7 +452,7 @@ static void unpackOSC_PrintTypeTaggedArgs(t_unpackOSC *x, t_atom *data_at, int *
                 }
                 else
                 {
-                    debug("string: \"%s\"\n", p);
+                    debugprint("string: \"%s\"\n", p);
                     SETSYMBOL(mya+myargc,gensym(p));
                     myargc++;
                     p = unpackOSC_DataAfterAlignedString(x, p, typeTags+n);
@@ -452,27 +460,27 @@ static void unpackOSC_PrintTypeTaggedArgs(t_unpackOSC *x, t_atom *data_at, int *
                 }
                 break;
             case 'T':
-                debug("[True]\n");
+                debugprint("[True]\n");
                 SETFLOAT(mya+myargc,1.);
                 myargc++;
                 break;
             case 'F':
-                debug("[False]\n");
+                debugprint("[False]\n");
                 SETFLOAT(mya+myargc,0.);
                 myargc++;
                 break;
             case 'N':
-                debug("[Nil]\n");
+                debugprint("[Nil]\n");
                 SETFLOAT(mya+myargc,0.);
                 myargc++;
                 break;
             case 'I':
-                debug("[Infinitum]\n");
+                debugprint("[Infinitum]\n");
                 SETSYMBOL(mya+myargc,gensym("INF"));
                 myargc++;
                 break;
             default:
-                debug("unpackOSC_PrintTypeTaggedArgs unknown typetag %c (%0X)\n", *thisType, *thisType);
+                debugprint("unpackOSC_PrintTypeTaggedArgs unknown typetag %c (%0X)\n", *thisType, *thisType);
                 pd_error(x, "unpackOSC: PrintTypeTaggedArgs: [Unrecognized type tag %c]", *thisType);
                 return;
          }
@@ -501,7 +509,7 @@ static void unpackOSC_PrintHeuristicallyTypeGuessedArgs(t_unpackOSC *x, t_atom *
 
         if (thisif.i >= -1000 && thisif.i <= 1000000)
         {
-            debug("%d ", thisif.i);
+            debugprint("%d ", thisif.i);
             SETFLOAT(mya+myargc,(t_float) (thisif.i));
             myargc++;
             i++;
@@ -509,7 +517,7 @@ static void unpackOSC_PrintHeuristicallyTypeGuessedArgs(t_unpackOSC *x, t_atom *
         else if (thisif.f >= -1000.f && thisif.f <= 1000000.f &&
             (thisif.f <=0.0f || thisif.f >= SMALLEST_POSITIVE_FLOAT))
         {
-            debug("%f ",  thisif.f);
+            debugprint("%f ",  thisif.f);
             SETFLOAT(mya+myargc,thisif.f);
             myargc++;
             i++;
@@ -517,7 +525,7 @@ static void unpackOSC_PrintHeuristicallyTypeGuessedArgs(t_unpackOSC *x, t_atom *
         else if (unpackOSC_IsNiceString(x, string, chars+n))
         {
             nextString = unpackOSC_DataAfterAlignedString(x, string, chars+n);
-            debug("\"%s\" ", (i == 0 && skipComma) ? string +1 : string);
+            debugprint("\"%s\" ", (i == 0 && skipComma) ? string +1 : string);
             SETSYMBOL(mya+myargc,gensym(string));
             myargc++;
             i += (nextString-string) / 4;
@@ -548,7 +556,7 @@ static const char *unpackOSC_DataAfterAlignedString(t_unpackOSC *x, const char *
 
     int i;
 
-    debug("unpackOSC_DataAfterAlignedString %p (boundary - string = %ld)\n",  string, boundary-string);
+    debugprint("unpackOSC_DataAfterAlignedString %p (boundary - string = %ld)\n",  string, boundary-string);
     if ((boundary - string) %4 != 0)
     {
         pd_error(x, "unpackOSC: DataAfterAlignedString: bad boundary");
@@ -557,7 +565,7 @@ static const char *unpackOSC_DataAfterAlignedString(t_unpackOSC *x, const char *
 
     for (i = 0; string[i] != '\0'; i++)
     {
-        debug("%02X(%c) ",  string[i], string[i]);
+        debugprint("%02X(%c) ",  string[i], string[i]);
         if (string + i >= boundary)
         {
             pd_error(x, "unpackOSC: DataAfterAlignedString: Unreasonably long string");
@@ -566,7 +574,7 @@ static const char *unpackOSC_DataAfterAlignedString(t_unpackOSC *x, const char *
     }
 
     /* Now string[i] is the first null character */
-    debug("\nunpackOSC_DataAfterAlignedString first null character at %p\n",  &string[i]);
+    debugprint("\nunpackOSC_DataAfterAlignedString first null character at %p\n",  &string[i]);
     i++;
 
     for (; (i % STRING_ALIGN_PAD) != 0; i++)
@@ -582,7 +590,7 @@ static const char *unpackOSC_DataAfterAlignedString(t_unpackOSC *x, const char *
             return 0;
         }
     }
-    debug("unpackOSC_DataAfterAlignedString first non-null character at %p\n",  &string[i]);
+    debugprint("unpackOSC_DataAfterAlignedString first non-null character at %p\n",  &string[i]);
 
     return string+i;
 }

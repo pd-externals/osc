@@ -27,9 +27,9 @@ typedef union
 
 #undef debug
 #if DEBUG
-# define debug printf
+# define debugprint printf
 #else
-static void debug(const char*fmt, ...) {(void)fmt;}
+static void debugprint(const char*fmt, ...) {(void)fmt;}
 #endif
 
 
