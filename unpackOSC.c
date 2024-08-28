@@ -68,14 +68,6 @@ The OSC webpage is http://cnmat.cnmat.berkeley.edu/OpenSoundControl
 #include "packingOSC.h"
 #include "OSC_timeTag.h"
 
-#undef debug
-#if DEBUG
-# define debug printf
-#else
-static void debug(const char*fmt, ...) {(void)fmt;}
-#endif
-
-
 static t_class *unpackOSC_class;
 
 typedef struct _unpackOSC

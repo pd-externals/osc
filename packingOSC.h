@@ -24,5 +24,14 @@ typedef union
     float   f;
 } intfloat32;
 
+
+#undef debug
+#if DEBUG
+# define debug printf
+#else
+static void debug(const char*fmt, ...) {(void)fmt;}
+#endif
+
+
 #endif // _PACKINGOSC
 /* end of packingOSC.h */
