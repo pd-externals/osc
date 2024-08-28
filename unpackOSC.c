@@ -98,7 +98,7 @@ static void *unpackOSC_new(void);
 static void unpackOSC_free(t_unpackOSC *x);
 static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv);
 static void unpackOSC_usepdtime(t_unpackOSC *x, t_floatarg f);
-static int unpackOSC_path(t_unpackOSC *x, t_atom *data_at, char *path);
+static t_symbol* unpackOSC_path(t_unpackOSC *x, const char *path, size_t length);
 static void unpackOSC_Smessage(t_unpackOSC *x, t_atom *data_at, int *data_atc, void *v, int n);
 static void unpackOSC_PrintTypeTaggedArgs(t_unpackOSC *x, t_atom *data_at, int *data_atc, void *v, int n);
 static void unpackOSC_PrintHeuristicallyTypeGuessedArgs(t_unpackOSC *x, t_atom *data_at, int *data_atc, void *v, int n, int skipComma);
@@ -147,17 +147,9 @@ static void unpackOSC_usepdtime(t_unpackOSC *x, t_floatarg f)
 }
 
 /* unpackOSC_list expects an OSC packet in the form of a list of floats on [0..255] */
-static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
+static void unpackOSC_dolist(t_unpackOSC *x, int argc, const char *buf, t_atom out_argv[MAX_MESG])
 {
-    (void)s;
-    int size, messageLen, i, j;
-    char *messageName, *args, *buf;
-    OSCTimeTag tt;
-    t_atom data_at[MAX_MESG] ={{0}};/* symbols making up the path + payload */
-    int data_atc = 0;/* number of symbols to be output */
-    char raw[MAX_MESG];/* bytes making up the entire OSC message */
-    int raw_c;/* number of bytes in OSC message */
-
+    debug(">>> %s(%p, %d, %p)\n", __FUNCTION__, x, argc, buf);
     debug(">>> unpackOSC_list: %d bytes, abort=%d, reentry_count %d recursion_level %d\n",
         argc, x->x_abort_bundle, x->x_reentry_count, x->x_recursion_level);
     if(x->x_abort_bundle) return; /* if backing quietly out of the recursive stack */
@@ -167,42 +159,11 @@ static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
         pd_error(x, "unpackOSC: Packet size (%d) not a multiple of 4 bytes: dropping packet", argc);
         goto unpackOSC_list_out;
     }
-    if(argc > MAX_MESG)
-    {
-        pd_error(x, "unpackOSC: Packet size (%d) greater than max (%d). Change MAX_MESG and recompile if you want more.", argc, MAX_MESG);
-        goto unpackOSC_list_out;
-    }
-    /* copy the list to a byte buffer, checking for bytes only */
-    for (i = 0; i < argc; ++i)
-    {
-        if (argv[i].a_type == A_FLOAT)
-        {
-            j = (int)argv[i].a_w.w_float;
-/*          if ((j == argv[i].a_w.w_float) && (j >= 0) && (j <= 255)) */
-/* this can miss bytes between 128 and 255 because they are interpreted somewhere as negative */
-/* , so change to this: */
-            if ((j == argv[i].a_w.w_float) && (j >= -128) && (j <= 255))
-            {
-                raw[i] = (char)j;
-            }
-            else
-            {
-                pd_error(x, "unpackOSC: Data out of range (%d), dropping packet",
-                         (int)argv[i].a_w.w_float);
-                goto unpackOSC_list_out;
-            }
-        }
-        else
-        {
-            pd_error(x, "unpackOSC: Data not float, dropping packet");
-            goto unpackOSC_list_out;
-        }
-    }
-    raw_c = argc;
-    buf = raw;
 
     if ((argc >= 8) && (strncmp(buf, "#bundle", 8) == 0))
     { /* This is a bundle message. */
+        int i = 16; /* Skip "#bundle\0" and time tag */
+        OSCTimeTag tt;
         double delta = 0.;
         debug("unpackOSC: bundle msg:\n");
 
@@ -238,11 +199,9 @@ static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
         /* Note: if we wanted to actually use the time tag as a little-endian
           64-bit int, we'd have to word-swap the two 32-bit halves of it */
 
-        i = 16; /* Skip "#group\0" and time tag */
-
         while(i < argc)
         {
-            size = ntohl(*((int *) (buf + i)));
+            int size = ntohl(*((int *) (buf + i)));
             if ((size % 4) != 0)
             {
                 pd_error(x, "unpackOSC: Bad size count %d in bundle (not a multiple of 4)", size);
@@ -264,9 +223,9 @@ static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
                 x->x_abort_bundle = 1;/* we need to back out of the recursive stack*/
                 goto unpackOSC_list_out;
             }
-            debug("unpackOSC: bundle calling unpackOSC_list(x=%p, s=%s, size=%d, argv[%d]=%p)\n",
-              x, s->s_name, size, i+4, &argv[i+4]);
-            unpackOSC_list(x, s, size, &argv[i+4]);
+            debug("unpackOSC: bundle calling unpackOSC_list(x=%p, size=%d, buf[%d]=%p)\n",
+              x, size, i+4, &buf[i+4]);
+            unpackOSC_dolist(x, size, &buf[i+4], out_argv);
             i += 4 + size;
         }
 
@@ -282,10 +241,13 @@ static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
         post("unpackOSC: Time message: %s\n :).\n", buf);
         goto unpackOSC_list_out;
     } else { /* This is not a bundle message or a time message */
+        int out_argc = 0; /* number of atoms to be output; atoms are stored in out_argv */
+        const char*messageName = buf;
+        int messageLen;
+        const char*args = unpackOSC_DataAfterAlignedString(x, messageName, buf+argc);
+        t_symbol *path;
 
-        messageName = buf;
-        debug("unpackOSC: message name string: %s length %d\n", messageName, raw_c);
-        args = unpackOSC_DataAfterAlignedString(x, messageName, buf+raw_c);
+        debug("unpackOSC: message name string: %s length %d\n", messageName, argc);
         if (args == 0)
         {
             pd_error(x, "unpackOSC: Bad message name string: Dropping entire message.");
@@ -293,41 +255,86 @@ static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
         }
         messageLen = args-messageName;
         /* put the OSC path into a single symbol */
-        data_atc = unpackOSC_path(x, data_at, messageName); /* returns 1 if path OK, else 0  */
-        if (data_atc == 1)
+        path = unpackOSC_path(x, messageName, messageLen); /* returns 0 if path failed  */
+        if (path == 0)
         {
-            debug("unpackOSC_list calling unpackOSC_Smessage: message length %d\n", raw_c-messageLen);
-            unpackOSC_Smessage(x, data_at, &data_atc, (void *)args, raw_c-messageLen);
-            if (0 == x->x_bundle_flag)
-                outlet_float(x->x_delay_out, 0); /* no delay for message not in a bundle */
+            pd_error(x, "unpackOSC: Bad message path: Dropping entire message.");
+            goto unpackOSC_list_out;
         }
+        debug("unpackOSC: message '%s', args=%p\n", path?path->s_name:0, args);
+        debug("unpackOSC_list calling unpackOSC_Smessage: message length %d\n", argc-messageLen);
+
+        unpackOSC_Smessage(x, out_argv, &out_argc, (void *)args, argc-messageLen);
+        if (0 == x->x_bundle_flag)
+            outlet_float(x->x_delay_out, 0); /* no delay for message not in a bundle */
+        outlet_anything(x->x_data_out, path, out_argc, out_argv);
     }
-    if (data_atc >= 1)
-        outlet_anything(x->x_data_out, atom_getsymbol(data_at), data_atc-1, data_at+1);
-    data_atc = 0;
     x->x_abort_bundle = 0;
 unpackOSC_list_out:
     x->x_recursion_level = 0;
     x->x_reentry_count--;
 }
 
-static int unpackOSC_path(t_unpackOSC *x, t_atom *data_at, char *path)
+static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
 {
+    static t_atom out_atoms[MAX_MESG]; /* symbols making up the payload */
+    char raw[MAX_MESG];/* bytes making up the entire OSC message */
     int i;
+    (void)s;
+    if(argc>MAX_MESG) {
+        pd_error(x, "unpackOSC: Packet size (%d) greater than max (%d). Change MAX_MESG and recompile if you want more.", argc, MAX_MESG);
+        return;
+    }
+    /* copy the list to a byte buffer, checking for bytes only */
+    for (i = 0; i < argc; ++i)
+    {
+        if (argv[i].a_type == A_FLOAT)
+        {
+            int j = (int)argv[i].a_w.w_float;
+/*          if ((j == argv[i].a_w.w_float) && (j >= 0) && (j <= 255)) */
+/* this can miss bytes between 128 and 255 because they are interpreted somewhere as negative, */
+/* so change to this: */
+            if ((j == argv[i].a_w.w_float) && (j >= -128) && (j <= 255))
+            {
+                raw[i] = (char)j;
+            }
+            else
+            {
+                pd_error(x, "unpackOSC: Data[%d] out of range (%d), dropping packet",
+                         i, (int)argv[i].a_w.w_float);
+                return;
+            }
+        }
+        else
+        {
+            pd_error(x, "unpackOSC: Data[%d] not float, dropping packet", i);
+            return;
+        }
+    }
+
+    unpackOSC_dolist(x, argc, raw, out_atoms);
+}
+
+static t_symbol*unpackOSC_path(t_unpackOSC *x, const char *path, size_t len)
+{
+    size_t i;
+
+    if(len<1)
+    {
+        pd_error(x, "unpackOSC: No Path, dropping message");
+        return 0;
+    }
 
     if (path[0] != '/')
     {
-        for (i = 0; i < 16; ++i) if ('\0' == path[i]) break;
-        path[i] = '\0';
         pd_error(x, "unpackOSC: Path doesn't begin with \"/\", dropping message");
         return 0;
     }
-    for (i = 1; i < MAX_MESG; ++i)
+    for (i = 1; i < len; ++i)
     {
         if (path[i] == '\0')
         { /* the end of the path: turn path into a symbol */
-            SETSYMBOL(data_at, gensym(path));
-            return 1;
+            return gensym(path);
         }
     }
     pd_error(x, "unpackOSC: Path too long, dropping message");
