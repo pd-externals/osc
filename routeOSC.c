@@ -107,7 +107,7 @@ static void routeOSC_symbol(t_routeOSC *x, t_symbol *s);
 static void routeOSC_list(t_routeOSC *x, t_symbol *s, int argc, t_atom *argv);
 static void *routeOSC_new(t_symbol *s, int argc, t_atom *argv);
 static void routeOSC_set(t_routeOSC *x, t_symbol *s, int argc, t_atom *argv);
-static void routeOSC_paths(t_routeOSC *x, t_symbol *s, int argc, t_atom *argv);
+static void routeOSC_paths(t_routeOSC *x);
 static void routeOSC_verbosity(t_routeOSC *x, t_floatarg v);
 static int routeOSC_count_slashes(const char *prefix);
 static const char *NextSlashOrNull(const char *p);
@@ -155,7 +155,7 @@ void routeOSC_setup(void)
     class_addsymbol(routeOSC_class, routeOSC_symbol);
     class_addlist(routeOSC_class, routeOSC_list);
     class_addmethod(routeOSC_class, (t_method)routeOSC_set, gensym("set"), A_GIMME, 0);
-    class_addmethod(routeOSC_class, (t_method)routeOSC_paths, gensym("paths"), A_GIMME, 0);
+    class_addmethod(routeOSC_class, (t_method)routeOSC_paths, gensym("paths"), 0);
     class_addmethod(routeOSC_class, (t_method)routeOSC_verbosity, gensym("verbosity"), A_DEFFLOAT, 0);
 
     ps_emptySymbol = gensym("");
@@ -173,7 +173,7 @@ static void *routeOSC_new(t_symbol *s, int argc, t_atom *argv)
 
     if (argc > MAX_NUM)
     {
-        pd_error(x, "* routeOSC: too many arguments: %d (max %d)", argc, MAX_NUM);
+        pd_error(x, "* %s: too many arguments: %d (max %d)", s->s_name, argc, MAX_NUM);
         return 0;
     }
     x->x_num = 0;
@@ -188,13 +188,13 @@ static void *routeOSC_new(t_symbol *s, int argc, t_atom *argv)
             }
             else
             {
-                pd_error(x, "routeOSC: argument %d does not begin with a slash(/).", i);
+                pd_error(x, "%s: argument %d does not begin with a slash(/).", s->s_name, i);
                 return(0);
             }
         }
         else
         {
-            pd_error(x, "routeOSC: argument %d is not a symbol.", i);
+            pd_error(x, "%s: argument %d is not a symbol.", s->s_name, i);
             return 0;
         }
     }
@@ -222,6 +222,7 @@ static void *routeOSC_new(t_symbol *s, int argc, t_atom *argv)
 static void routeOSC_set(t_routeOSC *x, t_symbol *s, int argc, t_atom *argv)
 {
     int i;
+    (void)s;
 
     if (argc > x->x_num)
     {
@@ -251,7 +252,7 @@ static void routeOSC_set(t_routeOSC *x, t_symbol *s, int argc, t_atom *argv)
     }
 }
 
-static void routeOSC_paths(t_routeOSC *x, t_symbol *s, int argc, t_atom *argv)
+static void routeOSC_paths(t_routeOSC *x)
 { /* print  out the paths we are matching */
     int i;
 

@@ -385,6 +385,7 @@ static void packOSC_sendtyped(t_packOSC *x, t_symbol *s, int argc, t_atom *argv)
     unsigned int    i, nTagsWithData, nArgs, blobCount;
     unsigned int    m, tagIndex, typedArgIndex, argvIndex;
     char            c;
+    (void)s;
 
 #ifdef DEBUG
     printf("*** packOSC_sendtyped bundle %d reentry %d\n", x->x_bundle, x->x_reentry_count);

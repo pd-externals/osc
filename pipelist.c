@@ -43,7 +43,7 @@ static void *pipelist_new(t_symbol *s, int argc, t_atom *argv)
         {
             char stupid[80];
             atom_string(&argv[argc-1], stupid, 79);
-            post("pipelist: %s: bad time delay value", stupid);
+            pd_error(x, "%s: %s: bad time delay value", s->s_name, stupid);
             deltime = 0;
         }
         else deltime = argv[argc-1].a_w.w_float;
@@ -108,6 +108,7 @@ static void pipelist_any_hang_tick(t_hang *h)
 
 static void pipelist_list(t_pipelist *x, t_symbol *s, int ac, t_atom *av)
 {
+    (void)s;
     if (x->x_deltime > 0)
     { /* if delay is real, save the list for output in delay milliseconds */
         t_hang *h;
