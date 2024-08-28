@@ -121,6 +121,7 @@ static void *unpackOSC_new(void)
 
 static void unpackOSC_free(t_unpackOSC *x)
 {
+    (void)x;
 }
 
 void unpackOSC_setup(void)
@@ -148,6 +149,7 @@ static void unpackOSC_usepdtime(t_unpackOSC *x, t_floatarg f)
 /* unpackOSC_list expects an OSC packet in the form of a list of floats on [0..255] */
 static void unpackOSC_list(t_unpackOSC *x, t_symbol *s, int argc, t_atom *argv)
 {
+    (void)s;
     int size, messageLen, i, j;
     char *messageName, *args, *buf;
     OSCTimeTag tt;
