@@ -29,7 +29,7 @@ HEREUNDER IS PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE
 MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 
 
-The OSC webpage is http://cnmat.cnmat.berkeley.edu/OpenSoundControl
+The OSC webpage is http://opensoundcontrol.org/
 */
 
 //#define DEBUG 1

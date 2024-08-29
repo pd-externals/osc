@@ -76,7 +76,7 @@ console;
 #X msg 212 404 list /west/rate any1 2 3;
 #X text 11 556 [routeOSC] routes Open Sound Control* messages \, or
 lists of anything beginning with a /path;
-#X text 13 599 *See http://opensoundcontrol.org/spec-1_0;
+#X text 13 599 *See http://opensoundcontrol.org/spec-1_0.html;
 #X connect 1 0 7 0;
 #X connect 1 1 19 0;
 #X connect 7 0 11 0;

@@ -23,7 +23,7 @@ HEREUNDER IS PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE
 MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 
 
-The OSC webpage is http://cnmat.cnmat.berkeley.edu/OpenSoundControl
+The OSC webpage is http://opensoundcontrol.org
 */
 
 /* OSC-route.c
@@ -69,7 +69,7 @@ HEREUNDER IS PROVIDED "AS IS". REGENTS HAS NO OBLIGATION TO PROVIDE
 MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 
 The OpenSound Control WWW page is
-    http://www.cnmat.berkeley.edu/OpenSoundControl
+    http://opensoundcontrol.org
 */
 
 

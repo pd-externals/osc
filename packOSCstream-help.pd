@@ -25,7 +25,7 @@ front of every OSC packet or bundle \, so that the receiving side knows
 \, how to split the incoming stream into OSC packets again.;
 #X msg -24 9 /first/message 1 \, /second/message 2;
 #X text 79 330 reference:;
-#X text 80 347 http://archive.cnmat.berkeley.edu/OpenSoundControl/OSC-spec.html
+#X text 80 347 https://opensoundcontrol.stanford.edu/spec-1_0.html
 : Section "OSC Packets";
 #X msg -4 29 send /test/one/two/three zz 88 T;
 #X msg 16 49 sendtyped /test/one/two/three sis zz 88 T;

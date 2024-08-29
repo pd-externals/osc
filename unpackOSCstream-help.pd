@@ -15,7 +15,7 @@
 #X text 159 283 reference:;
 #X obj 10 386 packOSCstream;
 #X obj 110 386 unpackOSC;
-#X text 160 300 http://archive.cnmat.berkeley.edu/OpenSoundControl/OSC-spec.html
+#X text 160 300 https://opensoundcontrol.stanford.edu/spec-1_0.html
 : Section "OSC Packets";
 #X text 141 221 milliseconds delay;
 #X text 158 119 [unpackOSCstream] will only be able to decode OSC packets
