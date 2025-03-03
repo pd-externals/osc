@@ -33,3 +33,17 @@ Author: Martin Peach
 - **[unpackOSCstream]**  
   convert an OSC (binary) message suitable for streaming transport to a Pd-message
   (useful if you want to transmit OSC over TCP/IP or a serial line)
+
+
+## Installing
+
+Like most externals, `osc` is available via [deken](https://deken.puredata.info/library/osc).
+- Open Pd's package manager (<kbd>Help</kbd>→<kbd>Find externals</kbd>)
+- search for "osc"
+- install the package
+
+## Building
+
+`osc` uses the [pd-lib-builder](https://github.com/pure-data/pd-lib-builder) build system.
+To build `osc` yourself, simply run `make` in the top-level directory.
+See the `pd-lib-builder` documentation for more information.
