@@ -39,5 +39,9 @@ OSCTimeTag OSCTT_Now(void);
 double OSCTT_getoffsetms(const OSCTimeTag a, const OSCTimeTag reference);
 OSCTimeTag OSCTT_offsetms(const OSCTimeTag org, double msec_offset);
 
+
+/* debugging */
+void OSCTT_post(const OSCTimeTag tt);
+
 #endif // _OSC_timetag_h
 /* end of OSC_timetag.h */

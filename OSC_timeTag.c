@@ -23,6 +23,7 @@
 # include <sys/time.h>
 #endif /* _WIN32 */
 
+#include <m_pd.h>
 #include <math.h>
 
 #define SECONDS_FROM_1900_to_1970 2208988800LL /* 17 leap years */
@@ -105,4 +106,8 @@ OSCTimeTag OSCTT_offsetms(const OSCTimeTag org, double msec_offset)
     tt.seconds = sec%0xFFFFFFFF;
     tt.fraction = fract%0xFFFFFFFF;
     return tt;
+}
+
+void OSCTT_post(const OSCTimeTag tt) {
+    post("OSCTimeTag: %u|%u == %08X|%08X", tt.seconds, tt.fraction, tt.seconds, tt.fraction);
 }
