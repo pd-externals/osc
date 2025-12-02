@@ -3,10 +3,16 @@
 lib.name = osc
 
 class.sources = \
-        packOSC.c \
         pipelist.c \
         routeOSC.c \
-        unpackOSC.c
+        $(empty)
+
+packOSC.class.sources = \
+        packOSC.c \
+        $(empty)
+unpackOSC.class.sources = \
+        unpackOSC.c \
+        $(empty)
 
 datafiles = \
         LICENSE.txt \
