@@ -59,9 +59,10 @@ OSCTimeTag OSCTT_Infinite(void)
     return tt;
 }
 
-OSCTimeTag OSCTT_Now(void)
+OSCTimeTag _OSCTT_Now(void)
 {
     OSCTimeTag tt;
+
 #ifdef _WIN32
     struct _timeb tb;
     _ftime(&tb);
@@ -81,6 +82,23 @@ OSCTimeTag OSCTT_Now(void)
     tt.fraction = (unsigned)tv.tv_usec;
 #endif
     tt.fraction *= (unsigned)TWO_TO_THE_32_OVER_ONE_MILLION; /* convert usec to 32-bit fraction of 1 sec */
+    return tt;
+}
+
+OSCTimeTag OSCTT_Now(void)
+{
+    static OSCTimeTag tt;
+    static double lastclocktime = -1;
+    double nowclocktime = clock_getlogicaltime();
+
+    if(lastclocktime == nowclocktime) {
+        /* no Pd time has elapsed; return the previous timetag */
+        return tt;
+    }
+
+    lastclocktime = nowclocktime;
+    tt = _OSCTT_Now();
+
     return tt;
 }
 
