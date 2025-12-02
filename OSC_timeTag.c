@@ -29,6 +29,10 @@
 #define SECONDS_FROM_1900_to_1970 2208988800LL /* 17 leap years */
 #define TWO_TO_THE_32_OVER_ONE_MILLION 4295LL
 
+static const double fract2ms = 1000./4294967296.;
+static const double ms2fract = 4294967296./1000.;
+
+
 /* The next bit is modified from OSC-timetag.c. */
 /*
 
@@ -84,7 +88,6 @@ OSCTimeTag OSCTT_Now(void)
 /* get offset between two timestamps in ms */
 double OSCTT_getoffsetms(const OSCTimeTag a, const OSCTimeTag reference)
 {
-  const double fract2ms = 1000./4294967296.;
   double d_sec = ((double)a.seconds  -(double)reference.seconds);
   double d_msec = ((double)a.fraction-(double)reference.fraction) * fract2ms;
   return d_sec * 1000. + d_msec;
@@ -93,8 +96,6 @@ double OSCTT_getoffsetms(const OSCTimeTag a, const OSCTimeTag reference)
 OSCTimeTag OSCTT_offsetms(const OSCTimeTag org, double msec_offset)
 {
     OSCTimeTag tt;
-    const double fract2ms = 1000./4294967296.;
-    const double ms2fract = 4294967296./1000.;
     double secs_off = floor(msec_offset*0.001);
     msec_offset -= secs_off*1000.;
     int64_t sec  = org.seconds + (int64_t)secs_off;
