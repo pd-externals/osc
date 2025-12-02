@@ -87,8 +87,8 @@ OSCTimeTag _OSCTT_Now(void)
 
 OSCTimeTag OSCTT_Now(void)
 {
-    static OSCTimeTag tt;
-    static double lastclocktime = -1;
+    PERTHREAD static OSCTimeTag tt;
+    PERTHREAD static double lastclocktime = -1;
     double nowclocktime = clock_getlogicaltime();
 
     if(lastclocktime == nowclocktime) {
