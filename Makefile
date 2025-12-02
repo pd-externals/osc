@@ -9,9 +9,11 @@ class.sources = \
 
 packOSC.class.sources = \
         packOSC.c \
+        OSC_timeTag.c \
         $(empty)
 unpackOSC.class.sources = \
         unpackOSC.c \
+        OSC_timeTag.c \
         $(empty)
 
 datafiles = \
